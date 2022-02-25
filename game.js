@@ -64,12 +64,16 @@ function replaceLetters() {
     }
 }
 
+function getScore(letter) {
+    if (letter === '*') return 0;
+    let ch = letter.charCodeAt(0);
+    return letterPoints[ch - 65];
+}
+
 function scoreWord(word) {
     let score = 0;
     for (let i = 0; i < word.length; i++) {
-        if (word[i] === '*') continue;
-        let ch = word.charCodeAt(i);
-        score += letterPoints[ch - 65]; // 65 converts A to 0
+        score += getScore(word[i]);
     }
     score += word.length;
     return score;

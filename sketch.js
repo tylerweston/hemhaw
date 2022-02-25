@@ -37,6 +37,7 @@ let highlightColor = '#000000';
 let savedWord = '';
 let scoreJustAdded = 0;
 let scrollTimer = 0;
+const maxScrollTimer = 1500;
 
 let trie;
 
@@ -49,11 +50,15 @@ let gridColor;
 const startingMinutes = 0.5;
 let score = 0;
 let highScore = 0;
+let storedHighscore = 0;
+let gotNewHighscore = false;
+let shownNewHighscore = false;
 let timer = 1000 * 60 * startingMinutes;  //msec * sec * min
 
 let isGameOver = false;
 
-const slidingMaxTime = 250;
+const maxHightlightTime = 1000;
+const slidingMaxTime = 200;
 let slidingTimer = 0;
 let rowSliding = false;
 let colSliding = false;
@@ -71,6 +76,7 @@ function setup() {
     if (tryHighScore !== null) 
     {
         highScore = tryHighScore;
+        storedHighscore = tryHighScore;
     } 
     else
     {
@@ -100,15 +106,16 @@ function draw() {
 
     runTimers();
 
+    // Draw Layers
     drawBackground();
     drawLetterArray();
     drawOutlines();
     drawArrows();
-
     drawHighlights();
     highlightClickTrail();
     drawCurrentWord();
     drawUI();
+    drawScoreSlider();
     drawShading();
 }
 
@@ -134,14 +141,29 @@ function runTimers() {
     if (timer <= 0)
     {
         // this is fired once so we can store high score here
-        if (score > highScore)
+        if (score > storedHighscore)
         {
+            gotNewHighscore = true;
             highScore = score;
             storeItem('highScore', highScore);
+            storedHighscore = highScore;
         }
         timer = 0;
         // gameOver();
         isGameOver = true;
+    }
+    highlightCounter += deltaTime;
+    if (highlightCounter > maxHightlightTime) {
+        savedTrail = [];
+        savedWord = null;
+        highlightCounter = 0;
+        highlightColor = '#000000';
+        // scoreJustAdded = null;
+    }
+    scrollTimer += deltaTime;
+    if (scrollTimer > maxScrollTimer) {
+        scrollTimer = 0;
+        scoreJustAdded = false;
     }
 }
 
@@ -157,6 +179,11 @@ function gameOver()
     fill(color(textColor));
     strokeWeight(2);
     text('click to\nplay again\n\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gameHeight / 2);
+    if (gotNewHighscore)
+    {
+        textSize(gridSize);
+        text('new high score!', gameWidth / 2, gridSize);
+    }
 }
 
 function resetGame()
@@ -173,6 +200,8 @@ function resetGame()
     savedWord = '';
     scoreJustAdded = 0;
     scrollTimer = 0;
+    gotNewHighscore = false;
+    shownNewHighscore = false;
     loadRandomPalette();
     makeLetterArray();
 }
@@ -234,10 +263,13 @@ function drawArrows() {
 }
 
 function drawUI() {
-    textSize(gridSize/3);
+    textSize(gridSize / 2);
     textAlign(CENTER, BASELINE);
-    noStroke();
-    fill(52, 180);
+    strokeWeight(1);
+    let strColor = color(gridColor);
+    strColor.setAlpha(100);
+    stroke(strColor);
+    fill(color(textColor));
     let displayTimeRaw = int(timer / 1000);
     let minutes = floor(displayTimeRaw / 60);
     let seconds = displayTimeRaw % 60;
@@ -245,10 +277,23 @@ function drawUI() {
     text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2, gameHeight - gridSize / 8);
 }
 
+function drawScoreSlider() {
+    // show recently gotten score
+    if (scoreJustAdded) {
+        textSize(gridSize/2);
+        textAlign(LEFT, BASELINE);
+        stroke(255, 50);
+        strokeWeight(3);
+        fill(color(textColor));
+        let textLeft = map(scrollTimer, 0, maxScrollTimer, 0, gameWidth);
+        text('+' + scoreJustAdded, textLeft , gameHeight - gridSize / 8);
+    }
+}
+
 function drawHighlights() {
-    const maxTime = 1500;
+
     let highlightColorAlpha = color(highlightColor);
-    highlightColorAlpha.setAlpha(map(highlightCounter, 0, maxTime, 150, 0));
+    highlightColorAlpha.setAlpha(map(highlightCounter, 0, maxHightlightTime, 150, 0));
     noStroke();
     fill(highlightColorAlpha);
     for (let i = 0; i < savedTrail.length; i++) {
@@ -268,25 +313,6 @@ function drawHighlights() {
         noStroke();
         fill(highlightColorAlpha);
         text(savedWord.toUpperCase(), gameWidth / 2, 6 * gridSize + gridSize);
-    }
-    
-    // show recently gotten score
-    if (scoreJustAdded) {
-        textSize(gridSize/2);
-        textAlign(CENTER, BASELINE);
-        noStroke();
-        fill(0);
-        let textLeft = map(highlightCounter, 0, maxTime, 0, gameWidth);
-        text('+' + scoreJustAdded, textLeft , gameHeight - gridSize / 8);
-    }
-
-    highlightCounter += deltaTime;
-    if (highlightCounter > maxTime) {
-        savedTrail = [];
-        savedWord = null;
-        highlightCounter = 0;
-        highlightColor = '#000000';
-        scoreJustAdded = null;
     }
 }
 
@@ -409,12 +435,6 @@ function drawLetterArray() {
     }
 }
 
-function getScore(letter) {
-    if (letter === '*') return 0;
-    let ch = letter.charCodeAt(0);
-    return letterPoints[ch - 65];
-}
-
 function slideLine(row, col, direction) {
     if (row !== false)
     {
@@ -450,46 +470,25 @@ function mouseClicked(event) {
     let y = floor(mouseY / gridSize);
     let gridX = x - 1;
     let gridY = y - 1;
-    // TODO: DRY this out
-    // TODO: We need to wait for the animation to finish before we switch the grid letters!
+    // TODO: DRY this out. This is a bit better but could still probably be improved
     if (x === 0 && y > 0 && y < 6) {
-        // let temp = letterArray[4][gridY];
-        // for (let x = 4; x > 0; x--) {
-        //     letterArray[x][gridY] = letterArray[x - 1][gridY];
-        // }
-        // letterArray[0][gridY] = temp;
         rowSliding = gridY;
         slidingDirection = 1;
         doingSlide = true;
     }
     if (x === 6 && y > 0 && y < 6) {
-        // let temp = letterArray[0][gridY];
-        // for (let x = 0; x < 4; x++) {
-        //     letterArray[x][gridY] = letterArray[x + 1][gridY];
-        // }
-        // letterArray[4][gridY] = temp;
         rowSliding = gridY;
         slidingDirection = -1;
         doingSlide = true;
 
     }
     if (y === 0 && x > 0 && x < 6) {
-        // let temp = letterArray[gridX][4];
-        // for (let y = 4; y > 0; y--) {
-        //     letterArray[gridX][y] = letterArray[gridX][y - 1];
-        // }
-        // letterArray[gridX][0] = temp;
         colSliding = gridX;
         slidingDirection = 1;
         doingSlide = true;
 
     }
     if (y === 6 && x > 0 && x < 6) {
-        // let temp = letterArray[gridX][0];
-        // for (let y = 0; y < 4; y++) {
-        //     letterArray[gridX][y] = letterArray[gridX][y + 1];
-        // }
-        // letterArray[gridX][4] = temp;
         colSliding = gridX;
         slidingDirection = -1;
         doingSlide = true;
@@ -569,7 +568,8 @@ function doWordCheck() {
     let isWord = checkWord(currentWord);
     if (isWord) {
         highlightColor = '#00EE00';
-        scoreJustAdded = scoreWord(currentWord)
+        scoreJustAdded = scoreWord(currentWord);
+        scrollTimer = 0;
         score += scoreJustAdded;
         timer += (scoreJustAdded * 500);    // half second per point
         if (score > highScore)
@@ -579,13 +579,15 @@ function doWordCheck() {
         removeLetters(clickedTrail);
         replaceLetters();
         // dropLetters();
+        savedWord = isWord;
     } else {
         highlightColor = '#EE0000';
+        savedWord = currentWord;
     }
     // start the highlight
     highlightCounter = 0;
     savedTrail = clickedTrail;
-    savedWord = isWord;
+
 
     currentWord = '';
     clickedTrail = [];
@@ -605,8 +607,8 @@ function drawCurrentWord() {
         textSize(textsizeGuess);
     }
     textAlign(CENTER, CENTER);
-    noStroke();
-    fill(0, 170);
+    stroke(color(gridColor));
+    fill(color(textColor));
     text(currentWord, gameWidth / 2, 6 * gridSize + gridSize);
 }
 
