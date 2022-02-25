@@ -1,5 +1,5 @@
 /* 
-werdgle
+hemhaw
 Created by mkp5 on 15/02/2022 15:08:53
  */
 let cnv;
@@ -11,7 +11,6 @@ and
 
 /*
 TODO:
-- rename, horrible name!
 - Try with just replacing used tiles, not sliding them
 - add a timer? Different game modes?
 - add score juice
