@@ -21,15 +21,11 @@ TODO:
 - show letter score on each tile?
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 */
-//let gridSize = 90;
-let gridSize; // = Math.min(windowWidth / 7, windowHeight / 8);
-let gameWidth; // = int(7 * gridSize);
-let gameHeight; // = int(8 * gridSize);
-// figure out largest we can make the grid
- 
+let gridSize;
+let gameWidth;
+let gameHeight;
 
 let currentWord = '';
-
 let clickedTrail = [];
 let lastClicked = [];
 
@@ -115,6 +111,7 @@ function printConsoleGreeting()
 }
 
 function populateTrie() {
+    // Get the word list and build out the trie 
     let listOfWords = wordlist();
     for (let i = 0; i < listOfWords.length; i++) {
         trie.add(listOfWords[i]);
@@ -122,10 +119,11 @@ function populateTrie() {
 }
 
 function loadRandomPalette() {
+    // Get a new random palette and save it
     let randomPaletteIndex = floor(random(0, palettes.length));
-    storeItem('palette', randomPaletteIndex);
     let randomPalette = palettes[randomPaletteIndex];
     [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = randomPalette;
+    storeItem('palette', randomPaletteIndex);
 }
 
 function loadPalette(index) {
@@ -173,9 +171,8 @@ function drawDeBroglie() {
             x = r*cos(radians(i));
             y = gameHeight/2-y;
             x = gameWidth/2+x;
-            //circle(x,y,3,`hsl(${50*j},100%,50%)`,'#fff',0);
             noStroke();
-            fill(color(30 * j, 255, 150, 150));
+            fill(color(30 * j, 255, 150, 200));
             circle(x, y, 25, 25);
         }
     }
