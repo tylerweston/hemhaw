@@ -33,6 +33,7 @@ let highlightCounter = 0;
 let highlightColor = '#000000';
 let savedWord = '';
 let scoreJustAdded = 0;
+let scrollTimer = 0;
 
 let trie;
 
@@ -62,7 +63,8 @@ function populateTrie() {
 }
 
 function loadRandomPalette() {
-    let randomPalette = palettes[floor(random(0, palettes.length))];
+    let randomPaletteIndex = floor(random(0, palettes.length));
+    let randomPalette = palettes[randomPaletteIndex];
     [backgroundColor, correctColor, incorrectColor, textColor, gridColor] = randomPalette;
 }
 
@@ -82,20 +84,24 @@ function draw() {
     drawCurrentWord();
     drawUI();
 
-    if (Math.random() < 0.005) {
-        let xRandom = floor(random(0, 5));
-        let yRandom = floor(random(0, 5));
-        // if this x and y location are in our clicked trail, don't change it
-        if (!isLocationSelected(xRandom, yRandom))
-        {
-            getNewLetterAtLocation(xRandom, yRandom);
-        }
-    }
     noFill();
     stroke(0, 50);
     strokeWeight(8);
     rect(gridSize, gridSize, gridSize * 5, gridSize * 5);
 }
+
+// function replaceRandomLetter() {
+//     // UNUSED
+//     if (Math.random() < 0.005) {
+//         let xRandom = floor(random(0, 5));
+//         let yRandom = floor(random(0, 5));
+//         // if this x and y location are in our clicked trail, don't change it
+//         if (!isLocationSelected(xRandom, yRandom))
+//         {
+//             getNewLetterAtLocation(xRandom, yRandom);
+//         }
+//     }
+// }
 
 function drawArrows() {
     let arrowSize = gridSize / 2;
@@ -115,6 +121,20 @@ function drawArrows() {
             fill(color(textColor));
         }
         text('<', gridSize * 6 + gridSize / 2, gridSize * y + gridSize / 2);
+    }
+    for (let x = 1; x <= 5; x++) {
+        if (isMouseCloseToCenterOfSquare(x, 0)) {
+            fill(color(correctColor));
+        } else {
+            fill(color(textColor));
+        }
+        text('v', gridSize * x + gridSize / 2, gridSize / 2);
+        if (isMouseCloseToCenterOfSquare(x, 6)) {
+            fill(color(correctColor));
+        } else {
+            fill(color(textColor));
+        }
+        text('^', gridSize * x + gridSize / 2, gridSize * 6 + gridSize / 2);
     }
 }
 
@@ -230,34 +250,79 @@ function drawLetterArray() {
         }
     }
 
+    // draw scores
+    fill(0, 130);
+    let gridEigth = gridSize / 8;
+    textSize(gridSize / 4);
+    textAlign(CENTER, CENTER);
+    for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 5; j++) {
+            // get score for letter
+
+            let ch = letterArray[i][j];
+            if (ch === '*') continue;
+            let score = getScore(ch);
+            text(score, (i + 2) * gridSize - gridEigth, (j + 2) * gridSize - gridEigth);
+        }
+    }
     
 }
 
+function getScore(letter) {
+    if (letter === '*') return 0;
+    let ch = letter.charCodeAt(0);
+    return letterPoints[ch - 65];
+}
+
 function mouseClicked() {
+    // console.log("mouse pressed");
     if (mouseX < gridSize / 2 && mouseY < gridSize / 2) {
         loadRandomPalette();
     }
     // check if we are in the leftmost or rightmost column
     let x = floor(mouseX / gridSize);
-    let y = floor(mouseY / gridSize) - 1;
-    if (x === 0) {
-        let temp = letterArray[4][y];
+    let y = floor(mouseY / gridSize);
+    let gridX = x - 1;
+    let gridY = y - 1;
+    if (x === 0 && y > 0 && y < 6) {
+        let temp = letterArray[4][gridY];
         for (let x = 4; x > 0; x--) {
-            letterArray[x][y] = letterArray[x - 1][y];
+            letterArray[x][gridY] = letterArray[x - 1][gridY];
         }
-        letterArray[0][y] = temp;
+        letterArray[0][gridY] = temp;
     }
-    if (x === 6) {
-        let temp = letterArray[0][y];
+    if (x === 6 && y > 0 && y < 6) {
+        let temp = letterArray[0][gridY];
         for (let x = 0; x < 4; x++) {
-            letterArray[x][y] = letterArray[x + 1][y];
+            letterArray[x][gridY] = letterArray[x + 1][gridY];
         }
-        letterArray[4][y] = temp;
+        letterArray[4][gridY] = temp;
+    }
+    if (y === 0 && x > 0 && x < 6) {
+        let temp = letterArray[gridX][4];
+        for (let y = 4; y > 0; y--) {
+            letterArray[gridX][y] = letterArray[gridX][y - 1];
+        }
+        letterArray[gridX][0] = temp;
+    }
+    if (y === 6 && x > 0 && x < 6) {
+        let temp = letterArray[gridX][0];
+        for (let y = 0; y < 4; y++) {
+            letterArray[gridX][y] = letterArray[gridX][y + 1];
+        }
+        letterArray[gridX][4] = temp;
     }
 
 }
 
 function mouseDragged() {
+    if (mouseX < gridSize || mouseY < gridSize || mouseX > gameWidth - gridSize || mouseY > gameHeight - gridSize) {
+        // stop the current drag without scoring
+        currentWord = '';
+        clickedTrail = [];
+        lastClicked = [];
+        return;
+    };
     [gridX, gridY] = getClosestSquare();
     if (gridX >= 0 && gridX <= 4 && gridY >= 0 && gridY <= 4 
         && !isLocationSelected(gridX, gridY) 
@@ -345,7 +410,7 @@ function drawCurrentWord() {
     }
     textAlign(CENTER, CENTER);
     noStroke();
-    fill(0);
+    fill(0, 170);
     text(currentWord, gameWidth / 2, 6 * gridSize + gridSize);
 }
 
