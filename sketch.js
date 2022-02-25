@@ -11,14 +11,8 @@ and
 
 /*
 TODO:
-- Try with just replacing used tiles, not sliding them
-- add a timer? Different game modes?
-- add score juice
-- Permanent high score
+- way so you can just hold down mouse on buttons and they will keep scrolling
 - add sound effects
-- should letters randomly change?
-- way to shake entire board if you are stuck?
-- show letter score on each tile?
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 */
 let gridSize;
@@ -35,7 +29,7 @@ let highlightColor = '#000000';
 let savedWord = '';
 let scoreJustAdded = 0;
 let scrollTimer = 0;
-const maxScrollTimer = 1500;
+const maxScrollTimer = 2000;
 
 let trie;
 
@@ -333,17 +327,22 @@ function drawArrows() {
 }
 
 function drawUI() {
-    textSize(gridSize / 2);
-    textAlign(CENTER, BASELINE);
-    strokeWeight(1);
-    let strColor = color(gridColor);
-    strColor.setAlpha(100);
-    stroke(strColor);
-    fill(color(textColor));
     let displayTimeRaw = int(timer / 1000);
     let minutes = floor(displayTimeRaw / 60);
     let seconds = displayTimeRaw % 60;
     let displayTime = minutes + ':' + nf(seconds, 2);
+    textSize(gridSize / 2);
+    textAlign(CENTER, BASELINE);
+    noFill();
+    strokeWeight(2);
+    stroke(180, 30);
+
+    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2 - 2, gameHeight - gridSize / 8 - 2);
+    stroke(0, 30);
+    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2 + 2, gameHeight - gridSize / 8 + 2);
+    stroke(0);
+    strokeWeight(2);
+    fill(color(textColor));
     text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2, gameHeight - gridSize / 8);
 }
 
@@ -352,10 +351,15 @@ function drawScoreSlider() {
     if (scoreJustAdded) {
         textSize(gridSize/2);
         textAlign(LEFT, BASELINE);
-        stroke(255, 50);
-        strokeWeight(3);
-        fill(color(textColor));
         let textLeft = map(scrollTimer, 0, maxScrollTimer, 0, gameWidth);
+        stroke(255, 50);
+        strokeWeight(4);
+        noFill();
+        text('+' + scoreJustAdded, textLeft , gameHeight - gridSize / 8);
+        strokeWeight(2);
+        stroke(0);
+        fill(color(textColor));
+
         text('+' + scoreJustAdded, textLeft , gameHeight - gridSize / 8);
     }
 }
@@ -407,7 +411,6 @@ function drawLetterArray() {
     }
 
     // draw letters
-
     textAlign(CENTER, CENTER);
 
     let slideDistanceOffset = map(slidingTimer, 0, slidingMaxTime, 0, gridSize);
@@ -529,8 +532,8 @@ function slideLine(row, col, direction) {
     }
 }
 
-function mouseClicked() {
-    // TODO: Allow right click to move a line the opposite direction
+function mousePressed() {
+    // TODO: Allow right click to move a line the opposite direction?
     if (mouseX < gridSize / 2 && mouseY < gridSize / 2) {
         loadRandomPalette();
     }
@@ -540,29 +543,33 @@ function mouseClicked() {
     let gridX = x - 1;
     let gridY = y - 1;
     // TODO: DRY this out. This is a bit better but could still probably be improved
-    if (x === 0 && y > 0 && y < 6) {
+    if (x === 0 && y > 0 && y < 6) 
+    {
         rowSliding = gridY;
         slidingDirection = 1;
         doingSlide = true;
     }
-    if (x === 6 && y > 0 && y < 6) {
+    if (x === 6 && y > 0 && y < 6) 
+    {
         rowSliding = gridY;
         slidingDirection = -1;
         doingSlide = true;
 
     }
-    if (y === 0 && x > 0 && x < 6) {
+    if (y === 0 && x > 0 && x < 6) 
+    {
         colSliding = gridX;
         slidingDirection = 1;
         doingSlide = true;
 
     }
-    if (y === 6 && x > 0 && x < 6) {
+    if (y === 6 && x > 0 && x < 6) 
+    {
         colSliding = gridX;
         slidingDirection = -1;
         doingSlide = true;
-
     }
+    
 }
 
 function mouseDragged() {

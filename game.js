@@ -8,7 +8,7 @@ const consonants=['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q
 const letterPoints = [1, 3, 3, 2, 1, 4, 2, 4, 1, 8, 5, 1, 3, 1, 1, 3, 10, 1, 1, 1, 1, 4, 4, 8, 4, 10];
 
 let letterArray = [[], [], [], [], []];
-const vowelToConsonantRatio = 0.4;
+const vowelToConsonantRatio = 0.45;
 const wildcardPercent = 0.1;
 
 function makeLetterArray() {
