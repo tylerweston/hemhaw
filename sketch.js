@@ -49,7 +49,7 @@ let incorrectColor;
 let textColor;
 let gridColor;
 
-const startingMinutes = 0.5;
+const startingMinutes = 1;
 let score = 0;
 let highScore = 0;
 let storedHighscore = 0;
