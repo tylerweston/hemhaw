@@ -57,6 +57,8 @@ let rowSliding = false;
 let colSliding = false;
 let slidingDirection = 1;
 let doingSlide = false;
+let originalArrowX = 0;
+let originalArrowY = 0;
 
 let deBroglieTimer = 0;
 
@@ -180,16 +182,31 @@ function drawShading() {
     rect(gridSize, gridSize, gridSize * 5, gridSize * 5);
 }
 
+function checkStillClickedArrow()
+{
+    let xClicked = originalArrowX;
+    let yClicked = originalArrowY;
+    return  isMouseCloseToCenterOfSquare(xClicked, yClicked) && mouseIsPressed;
+    //return mouseIsPressed;
+}
+
 function runTimers() {
     timer -= deltaTime;
     if (doingSlide) {
         slidingTimer += deltaTime;
         if (slidingTimer >= slidingMaxTime) {
-            doingSlide = false;
             slideLine(rowSliding, colSliding, slidingDirection);
-            rowSliding = false;
-            colSliding = false;
             slidingTimer = 0;
+            // if we're still clicking over the arrow, keep sliding
+            if (checkStillClickedArrow()) {
+
+            }
+            else
+            {
+                doingSlide = false;
+                rowSliding = false;
+                colSliding = false;
+            }
         }
     }
     if (timer <= 0)
@@ -540,6 +557,8 @@ function mousePressed() {
     // check if we are in the leftmost or rightmost column
     let x = floor(mouseX / gridSize);
     let y = floor(mouseY / gridSize);
+    originalArrowX = x;
+    originalArrowY = y;
     let gridX = x - 1;
     let gridY = y - 1;
     // TODO: DRY this out. This is a bit better but could still probably be improved
