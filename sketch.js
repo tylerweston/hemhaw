@@ -283,6 +283,9 @@ function resetGame()
     scrollTimer = 0;
     gotNewHighscore = false;
     shownNewHighscore = false;
+    doingSlide = false;
+    rowSliding = false;
+    colSliding = false;
     // loadRandomPalette();
     makeLetterArray();
 }
