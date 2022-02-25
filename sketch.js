@@ -22,9 +22,12 @@ TODO:
 - show letter score on each tile?
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 */
-let gridSize = 90;
-let gameWidth = 7 * gridSize;
-let gameHeight = 8 * gridSize;
+//let gridSize = 90;
+let gridSize; // = Math.min(windowWidth / 7, windowHeight / 8);
+let gameWidth; // = int(7 * gridSize);
+let gameHeight; // = int(8 * gridSize);
+// figure out largest we can make the grid
+ 
 
 let currentWord = '';
 
@@ -66,6 +69,9 @@ let slidingDirection = 1;
 let doingSlide = false;
 
 function setup() { 
+    gridSize = Math.min(windowWidth / 7, windowHeight / 8) * 0.95;
+    gameWidth = int(7 * gridSize);
+    gameHeight = int(8 * gridSize);
     cnv = createCanvas(gameWidth, gameHeight);
     centerCanvas();
     makeLetterArray();
