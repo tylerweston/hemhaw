@@ -45,7 +45,7 @@ let trie;
 
 let backgroundColor;
 let correctColor;
-let incorrectColor;
+let highlightedSquareColor;
 let textColor;
 let gridColor;
 
@@ -58,6 +58,7 @@ let shownNewHighscore = false;
 let timer = 1000 * 60 * startingMinutes;  //msec * sec * min
 
 let isGameOver = false;
+let eatGameoverClickFlag = false;
 
 const maxHightlightTime = 1000;
 const slidingMaxTime = 200;
@@ -66,6 +67,8 @@ let rowSliding = false;
 let colSliding = false;
 let slidingDirection = 1;
 let doingSlide = false;
+
+let deBroglieTimer = 0;
 
 function setup() { 
     gridSize = Math.min(windowWidth / 7, windowHeight / 8) * 0.95;
@@ -76,7 +79,16 @@ function setup() {
     makeLetterArray();
     trie = new Trie();
     populateTrie();
-    loadRandomPalette();
+    let tryLoadPalette = getItem('palette');
+    if (tryLoadPalette !== null) 
+    {
+        loadPalette(tryLoadPalette);
+    }
+    else 
+    {
+        loadRandomPalette();
+    }
+    // storeItem('highScore', null);
     let tryHighScore = getItem('highScore');
     if (tryHighScore !== null) 
     {
@@ -87,7 +99,20 @@ function setup() {
     {
         storeItem('highScore', 0);
     }
+    printConsoleGreeting();
 } 
+
+function printConsoleGreeting()
+{
+    console.log(" __   __  _______  __   __  __   __  _______  _     _ ");
+    console.log("|  | |  ||       ||  |_|  ||  | |  ||   _   || | _ | |");
+    console.log("|  |_|  ||    ___||       ||  |_|  ||  |_|  || || || |");
+    console.log("|       ||   |___ |       ||       ||       ||       |");
+    console.log("|       ||    ___||       ||       ||       ||       |");
+    console.log("|   _   ||   |___ | ||_|| ||   _   ||   _   ||   _   |");
+    console.log("|__| |__||_______||_|   |_||__| |__||__| |__||__| |__|");
+    console.log("Tyler Weston, February 2022, https://github.com/tylerweston/hemhaw");
+}
 
 function populateTrie() {
     let listOfWords = wordlist();
@@ -98,8 +123,14 @@ function populateTrie() {
 
 function loadRandomPalette() {
     let randomPaletteIndex = floor(random(0, palettes.length));
+    storeItem('palette', randomPaletteIndex);
     let randomPalette = palettes[randomPaletteIndex];
-    [backgroundColor, correctColor, incorrectColor, textColor, gridColor] = randomPalette;
+    [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = randomPalette;
+}
+
+function loadPalette(index) {
+    let palette = palettes[index];
+    [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = palette;
 }
 
 function draw() { 
@@ -124,6 +155,33 @@ function draw() {
     drawShading();
 }
 
+function drawDeBroglie() {
+    // adapted from
+    // https://beetrandahiya.github.io/ChelseaJS-docs/examples/debroglie_rainbow.html
+    deBroglieTimer += deltaTime;
+    colorMode(HSB);
+    let t = deBroglieTimer / 20;
+    if (deBroglieTimer > 1000000) {
+        deBroglieTimer = 0;
+    }
+    for(j = 0; j < 7; j++)
+    {
+        for(i = 0; i <= 360; i += 3)
+        {
+            r = (gameWidth/3)+(gameWidth/2)*sin(radians(10*i+t+7*j))*sin(radians(10*i+t+7*j));
+            y = r*sin(radians(i));
+            x = r*cos(radians(i));
+            y = gameHeight/2-y;
+            x = gameWidth/2+x;
+            //circle(x,y,3,`hsl(${50*j},100%,50%)`,'#fff',0);
+            noStroke();
+            fill(color(30 * j, 255, 150, 150));
+            circle(x, y, 25, 25);
+        }
+    }
+    colorMode(RGB);
+}
+
 function drawShading() {
     noFill();
     stroke(0, 50);
@@ -146,6 +204,7 @@ function runTimers() {
     if (timer <= 0)
     {
         // this is fired once so we can store high score here
+        finalWordCheck();
         if (score > storedHighscore)
         {
             gotNewHighscore = true;
@@ -154,8 +213,12 @@ function runTimers() {
             storedHighscore = highScore;
         }
         timer = 0;
-        // gameOver();
+        if (mouseIsPressed && mouseButton === LEFT) 
+        {
+            eatGameoverClickFlag = true;
+        }
         isGameOver = true;
+        deBroglieTimer = 0;
     }
     highlightCounter += deltaTime;
     if (highlightCounter > maxHightlightTime) {
@@ -163,7 +226,6 @@ function runTimers() {
         savedWord = null;
         highlightCounter = 0;
         highlightColor = '#000000';
-        // scoreJustAdded = null;
     }
     scrollTimer += deltaTime;
     if (scrollTimer > maxScrollTimer) {
@@ -178,17 +240,23 @@ function gameOver()
     // and option to start again
     fill(0, 10);
     rect(0, 0, gameWidth, gameHeight);
+    if (gotNewHighscore)
+    {
+        drawDeBroglie();
+        textSize(gridSize);
+        fill(color(textColor));
+        stroke(0);
+        strokeWeight(1);
+        text('new high score!', gameWidth / 2, gridSize);
+    }
+
     textSize(gridSize / 2);
     textAlign(CENTER, CENTER);
     stroke(color(backgroundColor));
     fill(color(textColor));
     strokeWeight(2);
     text('click to\nplay again\n\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gameHeight / 2);
-    if (gotNewHighscore)
-    {
-        textSize(gridSize);
-        text('new high score!', gameWidth / 2, gridSize);
-    }
+
 }
 
 function resetGame()
@@ -207,7 +275,7 @@ function resetGame()
     scrollTimer = 0;
     gotNewHighscore = false;
     shownNewHighscore = false;
-    loadRandomPalette();
+    // loadRandomPalette();
     makeLetterArray();
 }
 
@@ -296,7 +364,6 @@ function drawScoreSlider() {
 }
 
 function drawHighlights() {
-
     let highlightColorAlpha = color(highlightColor);
     highlightColorAlpha.setAlpha(map(highlightCounter, 0, maxHightlightTime, 150, 0));
     noStroke();
@@ -465,7 +532,7 @@ function slideLine(row, col, direction) {
     }
 }
 
-function mouseClicked(event) {
+function mouseClicked() {
     // TODO: Allow right click to move a line the opposite direction
     if (mouseX < gridSize / 2 && mouseY < gridSize / 2) {
         loadRandomPalette();
@@ -561,10 +628,15 @@ function getClosestSquare() {
 }
 
 function mouseReleased() {
-    if (isGameOver)
+    if (isGameOver && !eatGameoverClickFlag)
     {
+        eatGameoverClickFlag = false;
         resetGame();
         return;
+    }
+    else
+    {
+        eatGameoverClickFlag = false;
     }
     doWordCheck();
 }
@@ -600,6 +672,20 @@ function doWordCheck() {
 
 }
 
+function finalWordCheck()
+{
+    let isWord = checkWord(currentWord);
+    if (!isWord) return;
+    let newScore = scoreWord(currentWord);
+    score += newScore;
+    if (score > highScore)
+    {
+        highScore = score;
+    }
+    currentWord = '';
+    clickedTrail = [];
+}
+
 function currentWordLower() {
     return currentWord.toLowerCase();
 }
@@ -620,9 +706,11 @@ function drawCurrentWord() {
 function highlightClickTrail() {
     // highlight squares
     noStroke();
-
+    let trailColor = color(highlightedSquareColor);
     for (let i = 0; i < clickedTrail.length; i++) {
-        fill(175, map(i, 0, clickedTrail.length, 75, 125));
+        //fill(175, map(i, 0, clickedTrail.length, 75, 125));
+        trailColor.setAlpha(map(i, 0, clickedTrail.length, 50, 200));
+        fill(trailColor);
         let x = clickedTrail[i][0] + 1;
         let y = clickedTrail[i][1] + 1;
 
@@ -634,7 +722,7 @@ function highlightClickTrail() {
     strokeWeight(4);
     noFill();
     for (let i = 0; i < clickedTrail.length; i++) {
-        let alph = map(i, 0, clickedTrail.length, 50, 175);
+        let alph = map(i, 0, clickedTrail.length, 0, 100);
         stroke(255, alph);
         let x = clickedTrail[i][0] + 1;
         let y = clickedTrail[i][1] + 1;
