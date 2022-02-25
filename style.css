@@ -1,8 +1,14 @@
-/* 
-werdlo
-Created by mkp5 on 15/02/2022 15:08:53
- */
 html, body {
-    margin: 0;
-    padding: 0;
+  height: 100%;
+  background-color: #373737;
+}
+
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: none;
 }

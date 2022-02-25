@@ -11,13 +11,16 @@ and
 
 /*
 TODO:
-- add a timer
+- rename, horrible name!
+- Try with just replacing used tiles, not sliding them
+- add a timer? Different game modes?
 - add score juice
+- Permanent high score
 - add sound effects
 - should letters randomly change?
 - way to shake entire board if you are stuck?
 - show letter score on each tile?
-- we don't need to keep the wordlist loaded after we create the trie
+- we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 */
 let gridSize = 90;
 let gameWidth = 7 * gridSize;
@@ -43,8 +46,19 @@ let incorrectColor;
 let textColor;
 let gridColor;
 
+const startingMinutes = 0.5;
 let score = 0;
-let timer = 0;
+let highScore = 0;
+let timer = 1000 * 60 * startingMinutes;  //msec * sec * min
+
+let isGameOver = false;
+
+const slidingMaxTime = 250;
+let slidingTimer = 0;
+let rowSliding = false;
+let colSliding = false;
+let slidingDirection = 1;
+let doingSlide = false;
 
 function setup() { 
     cnv = createCanvas(gameWidth, gameHeight);
@@ -53,6 +67,15 @@ function setup() {
     trie = new Trie();
     populateTrie();
     loadRandomPalette();
+    let tryHighScore = getItem('highScore');
+    if (tryHighScore !== null) 
+    {
+        highScore = tryHighScore;
+    } 
+    else
+    {
+        storeItem('highScore', 0);
+    }
 } 
 
 function populateTrie() {
@@ -69,7 +92,103 @@ function loadRandomPalette() {
 }
 
 function draw() { 
+    // The main loop
+    if (isGameOver) {
+        gameOver();
+        return;
+    }
+
+    runTimers();
+
+    drawBackground();
+    drawLetterArray();
+    drawOutlines();
+    drawArrows();
+
+    drawHighlights();
+    highlightClickTrail();
+    drawCurrentWord();
+    drawUI();
+    drawShading();
+}
+
+function drawShading() {
+    noFill();
+    stroke(0, 50);
+    strokeWeight(8);
+    rect(gridSize, gridSize, gridSize * 5, gridSize * 5);
+}
+
+function runTimers() {
+    timer -= deltaTime;
+    if (doingSlide) {
+        slidingTimer += deltaTime;
+        if (slidingTimer >= slidingMaxTime) {
+            doingSlide = false;
+            slideLine(rowSliding, colSliding, slidingDirection);
+            rowSliding = false;
+            colSliding = false;
+            slidingTimer = 0;
+        }
+    }
+    if (timer <= 0)
+    {
+        // this is fired once so we can store high score here
+        if (score > highScore)
+        {
+            highScore = score;
+            storeItem('highScore', highScore);
+        }
+        timer = 0;
+        // gameOver();
+        isGameOver = true;
+    }
+}
+
+function gameOver()
+{
+    // show a game over screen with final score, high score
+    // and option to start again
+    fill(0, 10);
+    rect(0, 0, gameWidth, gameHeight);
+    textSize(gridSize / 2);
+    textAlign(CENTER, CENTER);
+    stroke(color(backgroundColor));
+    fill(color(textColor));
+    strokeWeight(2);
+    text('click to\nplay again\n\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gameHeight / 2);
+}
+
+function resetGame()
+{
+    score = 0;
+    timer = 1000 * 60 * startingMinutes;
+    isGameOver = false;
+    currentWord = '';
+    clickedTrail = [];
+    lastClicked = [];
+    savedTrail = [];
+    highlightCounter = 0;
+    highlightColor = '#000000';
+    savedWord = '';
+    scoreJustAdded = 0;
+    scrollTimer = 0;
+    loadRandomPalette();
+    makeLetterArray();
+}
+
+function drawBackground() {
     background(color(backgroundColor));
+}
+
+function drawOutlines() {
+    noStroke();
+    fill(color(backgroundColor));
+    rect(0, 0, gameWidth, gridSize);
+    rect(0, gridSize, gridSize, gameHeight);
+    rect(gameWidth - gridSize, gridSize, gridSize, gameHeight);
+    rect(0, gameHeight - gridSize * 2, gameWidth - gridSize, gameHeight);
+
     fill(0, 80);
     rect(0, 6.5 * gridSize, gameWidth, gridSize);
     noFill();
@@ -77,31 +196,7 @@ function draw() {
     strokeWeight(8);
     rect(0, 0, gameWidth, gameHeight);
 
-    drawArrows();
-    drawLetterArray();
-    drawHighlights();
-    highlightClickTrail();
-    drawCurrentWord();
-    drawUI();
-
-    noFill();
-    stroke(0, 50);
-    strokeWeight(8);
-    rect(gridSize, gridSize, gridSize * 5, gridSize * 5);
 }
-
-// function replaceRandomLetter() {
-//     // UNUSED
-//     if (Math.random() < 0.005) {
-//         let xRandom = floor(random(0, 5));
-//         let yRandom = floor(random(0, 5));
-//         // if this x and y location are in our clicked trail, don't change it
-//         if (!isLocationSelected(xRandom, yRandom))
-//         {
-//             getNewLetterAtLocation(xRandom, yRandom);
-//         }
-//     }
-// }
 
 function drawArrows() {
     let arrowSize = gridSize / 2;
@@ -139,11 +234,15 @@ function drawArrows() {
 }
 
 function drawUI() {
-    textSize(gridSize/2);
+    textSize(gridSize/3);
     textAlign(CENTER, BASELINE);
     noStroke();
-    fill(0, 180);
-    text('Score: ' + score, gameWidth / 2, gameHeight - gridSize / 8);
+    fill(52, 180);
+    let displayTimeRaw = int(timer / 1000);
+    let minutes = floor(displayTimeRaw / 60);
+    let seconds = displayTimeRaw % 60;
+    let displayTime = minutes + ':' + nf(seconds, 2);
+    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2, gameHeight - gridSize / 8);
 }
 
 function drawHighlights() {
@@ -202,70 +301,112 @@ function isLocationSelected(x, y)
 }
 
 function drawLetterArray() {
-    // outline letters
+    // outline letter grid
     strokeWeight(3);
     stroke(0, 40);
     fill(color(gridColor));
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j < 5; j++) {
-            rect((i + 1) * gridSize, (j + 1) * gridSize, gridSize, gridSize);
+    for (let x = 0; x < 5; x++) {
+        for (let y = 0; y < 5; y++) {
+            rect((x + 1) * gridSize, (y + 1) * gridSize, gridSize, gridSize);
         }
     }
 
     // draw letters
-    textSize(gridSize * 0.9);
+
     textAlign(CENTER, CENTER);
 
-    // letter shading
-    stroke(220, 60);
-    fill(0);
-    strokeWeight(4);
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j < 5; j++) {
-            let ch = letterArray[i][j];
-            if (ch === '*') ch = '∗';
-            text(ch, (i + 1) * gridSize + gridSize / 2 - 1, (j + 1) * gridSize + gridSize / 2 - 1);
-        }
-    }
-    stroke(0, 70);
-    fill(0);
-    strokeWeight(4);
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j < 5; j++) {
-            let ch = letterArray[i][j];
-            if (ch === '*') ch = '∗';
-            text(ch, (i + 1) * gridSize + gridSize / 2 + 1, (j + 1) * gridSize + gridSize / 2 + 1);
-        }
-    }
+    let slideDistanceOffset = map(slidingTimer, 0, slidingMaxTime, 0, gridSize);
 
-    stroke(0, 50);
-    noStroke();
-    fill(color(textColor));
-    //strokeWeight(2);
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j < 5; j++) {
-            let ch = letterArray[i][j];
+    let xSlidingOffIndex = slidingDirection === 1 ? 4 : 0;
+    let ySlidingOffIndex = slidingDirection === 1 ? 4 : 0;
+
+    for (let x = 0; x <= 4; x++) 
+    {
+        for (let y = 0; y <= 4; y++) 
+        {
+            let xOffset = 0;
+            let yOffset = 0;
+            if (rowSliding !== false && y === rowSliding) {
+                xOffset = slideDistanceOffset * slidingDirection;
+            }
+            if (colSliding !== false && x === colSliding) {
+                yOffset = slideDistanceOffset * slidingDirection;
+            }
+            let ch = letterArray[x][y];
             if (ch === '*') ch = '∗';
-            text(ch, (i + 1) * gridSize + gridSize / 2, (j + 1) * gridSize + gridSize / 2);
-        }
-    }
+            textSize(gridSize * 0.85);
+            // hightlight
+            stroke(220, 60);
+            fill(0);
+            strokeWeight(4);
+            text(ch, 
+                (x + 1) * gridSize + gridSize / 2 - 1 + xOffset, 
+                (y + 1) * gridSize + gridSize / 2 - 1 + yOffset);
+            // dark shadow
+            stroke(0, 70);
+            text(ch, 
+                (x + 1) * gridSize + gridSize / 2 + 1 + xOffset, 
+                (y + 1) * gridSize + gridSize / 2 + 1 + yOffset);
+            // regular letter
+            stroke(100, 150);
+            strokeWeight(1);
+            fill(color(textColor));
+            text(ch, 
+                (x + 1) * gridSize + gridSize / 2 + xOffset, 
+                (y + 1) * gridSize + gridSize / 2 + yOffset);
 
-    // draw scores
-    fill(0, 130);
-    let gridEigth = gridSize / 8;
-    textSize(gridSize / 4);
-    textAlign(CENTER, CENTER);
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j < 5; j++) {
-            // get score for letter
-
-            let ch = letterArray[i][j];
-            if (ch === '*') continue;
+            // if we are the letter that is currently sliding off the board,
+            // we have to be redrawn wrapped around
+            // TODO: Maybe render the tile as an image so we don't have to repeat this
+            // and we can just redraw the image
+            if ((rowSliding !== false && y === rowSliding && x === xSlidingOffIndex) 
+                || (colSliding !== false && x === colSliding && y === ySlidingOffIndex)) {
+                // figure out which way to wrap around
+                let wrappedXPos = x + 1;
+                let wrappedYPos = y + 1;
+                if (rowSliding !== false && y === rowSliding) {
+                    wrappedXPos = xSlidingOffIndex === 0 ? 6 : 0;
+                } else if (colSliding !== false && x === colSliding) {
+                    wrappedYPos = ySlidingOffIndex === 0 ? 6 : 0;
+                }
+                // draw wrapped around letter
+                stroke(220, 60);
+                fill(0);
+                strokeWeight(4);
+                text(ch, 
+                    (wrappedXPos) * gridSize + gridSize / 2 - 1 + xOffset, 
+                    (wrappedYPos) * gridSize + gridSize / 2 - 1 + yOffset);
+                // dark shadow
+                stroke(0, 70);
+                text(ch, 
+                    (wrappedXPos) * gridSize + gridSize / 2 + 1 + xOffset, 
+                    (wrappedYPos) * gridSize + gridSize / 2 + 1 + yOffset);
+                // regular letter
+                stroke(100, 150);
+                strokeWeight(1);
+                fill(color(textColor));
+                text(ch, 
+                    (wrappedXPos) * gridSize + gridSize / 2 + xOffset, 
+                    (wrappedYPos) * gridSize + gridSize / 2 + yOffset);
+                // draw score
+                fill(0, 130);
+                let gridEigth = gridSize / 8;
+                textSize(gridSize / 4);
+                let score = getScore(ch);
+                text(score, 
+                    (wrappedXPos + 1) * gridSize - gridEigth + xOffset, 
+                    (wrappedYPos + 1) * gridSize - gridEigth + yOffset);
+            }
+            // draw score
+            fill(0, 130);
+            let gridEigth = gridSize / 8;
+            textSize(gridSize / 4);
             let score = getScore(ch);
-            text(score, (i + 2) * gridSize - gridEigth, (j + 2) * gridSize - gridEigth);
+            text(score, 
+                (x + 2) * gridSize - gridEigth + xOffset, 
+                (y + 2) * gridSize - gridEigth + yOffset);
         }
     }
-    
 }
 
 function getScore(letter) {
@@ -274,8 +415,33 @@ function getScore(letter) {
     return letterPoints[ch - 65];
 }
 
-function mouseClicked() {
-    // console.log("mouse pressed");
+function slideLine(row, col, direction) {
+    if (row !== false)
+    {
+        // we are sliding a row
+        // if direction = 1 we are sliding right
+        let tempIndex = direction === 1 ? 0 : 4;
+        let tempLetter = letterArray[4 - tempIndex][row];
+        for (let x = 4 - tempIndex; x !== tempIndex; x -= direction) {
+            letterArray[x][row] = letterArray[x - direction][row];
+        }
+        letterArray[tempIndex][row] = tempLetter;
+    }
+    else if (col !== false)
+    {
+        // we are sliding a column
+        // if direction = 1 we are sliding down
+        let tempIndex = direction === 1 ? 0 : 4;
+        let tempLetter = letterArray[col][4 - tempIndex];
+        for (let y = 4 - tempIndex; y !== tempIndex; y -= direction) {
+            letterArray[col][y] = letterArray[col][y - direction];
+        }
+        letterArray[col][tempIndex] = tempLetter;
+    }
+}
+
+function mouseClicked(event) {
+    // TODO: Allow right click to move a line the opposite direction
     if (mouseX < gridSize / 2 && mouseY < gridSize / 2) {
         loadRandomPalette();
     }
@@ -284,39 +450,59 @@ function mouseClicked() {
     let y = floor(mouseY / gridSize);
     let gridX = x - 1;
     let gridY = y - 1;
+    // TODO: DRY this out
+    // TODO: We need to wait for the animation to finish before we switch the grid letters!
     if (x === 0 && y > 0 && y < 6) {
-        let temp = letterArray[4][gridY];
-        for (let x = 4; x > 0; x--) {
-            letterArray[x][gridY] = letterArray[x - 1][gridY];
-        }
-        letterArray[0][gridY] = temp;
+        // let temp = letterArray[4][gridY];
+        // for (let x = 4; x > 0; x--) {
+        //     letterArray[x][gridY] = letterArray[x - 1][gridY];
+        // }
+        // letterArray[0][gridY] = temp;
+        rowSliding = gridY;
+        slidingDirection = 1;
+        doingSlide = true;
     }
     if (x === 6 && y > 0 && y < 6) {
-        let temp = letterArray[0][gridY];
-        for (let x = 0; x < 4; x++) {
-            letterArray[x][gridY] = letterArray[x + 1][gridY];
-        }
-        letterArray[4][gridY] = temp;
+        // let temp = letterArray[0][gridY];
+        // for (let x = 0; x < 4; x++) {
+        //     letterArray[x][gridY] = letterArray[x + 1][gridY];
+        // }
+        // letterArray[4][gridY] = temp;
+        rowSliding = gridY;
+        slidingDirection = -1;
+        doingSlide = true;
+
     }
     if (y === 0 && x > 0 && x < 6) {
-        let temp = letterArray[gridX][4];
-        for (let y = 4; y > 0; y--) {
-            letterArray[gridX][y] = letterArray[gridX][y - 1];
-        }
-        letterArray[gridX][0] = temp;
+        // let temp = letterArray[gridX][4];
+        // for (let y = 4; y > 0; y--) {
+        //     letterArray[gridX][y] = letterArray[gridX][y - 1];
+        // }
+        // letterArray[gridX][0] = temp;
+        colSliding = gridX;
+        slidingDirection = 1;
+        doingSlide = true;
+
     }
     if (y === 6 && x > 0 && x < 6) {
-        let temp = letterArray[gridX][0];
-        for (let y = 0; y < 4; y++) {
-            letterArray[gridX][y] = letterArray[gridX][y + 1];
-        }
-        letterArray[gridX][4] = temp;
-    }
+        // let temp = letterArray[gridX][0];
+        // for (let y = 0; y < 4; y++) {
+        //     letterArray[gridX][y] = letterArray[gridX][y + 1];
+        // }
+        // letterArray[gridX][4] = temp;
+        colSliding = gridX;
+        slidingDirection = -1;
+        doingSlide = true;
 
+    }
 }
 
 function mouseDragged() {
-    if (mouseX < gridSize || mouseY < gridSize || mouseX > gameWidth - gridSize || mouseY > gameHeight - gridSize) {
+    if (mouseX < gridSize || 
+        mouseY < gridSize || 
+        mouseX > gameWidth - gridSize || 
+        mouseY > gameHeight - gridSize) 
+    {
         // stop the current drag without scoring
         currentWord = '';
         clickedTrail = [];
@@ -328,16 +514,17 @@ function mouseDragged() {
         && !isLocationSelected(gridX, gridY) 
         && isMouseCloseToCenterOfSquare(gridX + 1, gridY + 1)) {
         // make sure we're the first click or touching the last location selected
-        if (lastClicked.length === 0)
+        if (lastClicked.length === 0) 
         {
             lastClicked = [gridX, gridY];
-        }
-        else
+        } 
+        else 
         {
-            if (doGridsTouch(lastClicked[0], lastClicked[1], gridX, gridY)) {
+            if (doGridsTouch(lastClicked[0], lastClicked[1], gridX, gridY)) 
+            {
                 lastClicked = [gridX, gridY];
-            }
-            else
+            } 
+            else 
             {
                 // nothing else to do, stop handling mouse click
                 return;
@@ -362,7 +549,6 @@ function isMouseCloseToCenterOfSquare(gridX, gridY) {
 }
 
 function getClosestSquare() {
-    // TODO: Don't check very edges of boxes since it makes it difficult to select diagonally
     let realX = floor(mouseX / gridSize);
     let realY = floor(mouseY / gridSize);
     let gridX = realX - 1;
@@ -371,20 +557,30 @@ function getClosestSquare() {
 }
 
 function mouseReleased() {
+    if (isGameOver)
+    {
+        resetGame();
+        return;
+    }
     doWordCheck();
 }
 
 function doWordCheck() {
-    let isWord = checkWord(currentWordLower());
+    let isWord = checkWord(currentWord);
     if (isWord) {
-        highlightColor = '#00FF00';
-        scoreJustAdded = scoreWord(currentWordLower())
+        highlightColor = '#00EE00';
+        scoreJustAdded = scoreWord(currentWord)
         score += scoreJustAdded;
+        timer += (scoreJustAdded * 500);    // half second per point
+        if (score > highScore)
+        {
+            highScore = score;
+        }
         removeLetters(clickedTrail);
-        dropLetters();
-    }
-    else {
-        highlightColor = '#FF0000';
+        replaceLetters();
+        // dropLetters();
+    } else {
+        highlightColor = '#EE0000';
     }
     // start the highlight
     highlightCounter = 0;
@@ -436,7 +632,10 @@ function highlightClickTrail() {
         let x = clickedTrail[i][0] + 1;
         let y = clickedTrail[i][1] + 1;
         if (lastLocation.length > 0) {
-            line(lastLocation[0] * gridSize + gridSize / 2, lastLocation[1] * gridSize + gridSize / 2, x * gridSize + gridSize / 2, y * gridSize + gridSize / 2);
+            line(lastLocation[0] * gridSize + gridSize / 2, 
+                lastLocation[1] * gridSize + gridSize / 2, 
+                x * gridSize + gridSize / 2, 
+                y * gridSize + gridSize / 2);
         }
         lastLocation = [x, y];
     }

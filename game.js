@@ -52,7 +52,16 @@ function dropLetters() {
             y--;
         }
     }
+}
 
+function replaceLetters() {
+    for (let x = 0; x < 5; x++) {
+        for (let y = 0; y < 5; y++) {
+            if (letterArray[x][y] === '') {
+                letterArray[x][y] = getRandomCharacter();
+            }
+        }
+    }
 }
 
 function scoreWord(word) {
@@ -60,7 +69,7 @@ function scoreWord(word) {
     for (let i = 0; i < word.length; i++) {
         if (word[i] === '*') continue;
         let ch = word.charCodeAt(i);
-        score += letterPoints[ch - 97]; // 97 converts a to 0
+        score += letterPoints[ch - 65]; // 65 converts A to 0
     }
     score += word.length;
     return score;
