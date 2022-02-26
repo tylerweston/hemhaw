@@ -46,6 +46,7 @@ let storedHighscore = 0;
 let gotNewHighscore = false;
 let shownNewHighscore = false;
 let timer = 1000 * 60 * startingMinutes;  //msec * sec * min
+let totalTimePlayed = 0;
 
 let isGameOver = false;
 let eatGameoverClickFlag = false;
@@ -191,6 +192,7 @@ function checkStillClickedArrow()
 }
 
 function runTimers() {
+    totalTimePlayed += deltaTime;
     timer -= deltaTime;
     if (doingSlide) {
         slidingTimer += deltaTime;
@@ -263,7 +265,11 @@ function gameOver()
     stroke(color(backgroundColor));
     fill(color(textColor));
     strokeWeight(2);
-    text('click to\nplay again\n\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gameHeight / 2);
+    let totalTimeSecondsRaw = floor(totalTimePlayed / 1000);
+    let totalTimeMinutes = floor(totalTimeSecondsRaw / 60);
+    let totalTimeSeconds = floor(totalTimeSecondsRaw % 60);
+    let totalTimeString = totalTimeMinutes + ':' + nf(totalTimeSeconds, 2);
+    text('click to\nplay again\n\ntotal time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gameHeight / 2);
 
 }
 
@@ -286,6 +292,7 @@ function resetGame()
     doingSlide = false;
     rowSliding = false;
     colSliding = false;
+    totalTimePlayed = 0;
     // loadRandomPalette();
     makeLetterArray();
 }
@@ -771,7 +778,7 @@ function highlightClickTrail() {
     let trailColor = color(highlightedSquareColor);
     for (let i = 0; i < clickedTrail.length; i++) {
         //fill(175, map(i, 0, clickedTrail.length, 75, 125));
-        trailColor.setAlpha(map(i, 0, clickedTrail.length, 50, 200));
+        trailColor.setAlpha(map(i, 0, clickedTrail.length, 100, 200));
         fill(trailColor);
         let x = clickedTrail[i][0] + 1;
         let y = clickedTrail[i][1] + 1;
