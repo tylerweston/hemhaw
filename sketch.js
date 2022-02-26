@@ -11,7 +11,7 @@ and
 
 /*
 TODO:
-- way so you can just hold down mouse on buttons and they will keep scrolling
+- allow user to unselect trail by backing over already selected blocks?
 - add sound effects
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 */
@@ -303,6 +303,8 @@ function drawOutlines() {
     rect(0, gameHeight - gridSize * 2, gameWidth - gridSize, gameHeight);
 
     fill(0, 80);
+    strokeWeight(4);
+    stroke(0, 50);
     rect(0, 6.5 * gridSize, gameWidth, gridSize);
     noFill();
     stroke(0, 50);
@@ -357,13 +359,13 @@ function drawUI() {
     strokeWeight(2);
     stroke(180, 30);
 
-    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2 - 2, gameHeight - gridSize / 8 - 2);
+    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2 - 2, gameHeight - gridSize / 8 );
     stroke(0, 30);
-    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2 + 2, gameHeight - gridSize / 8 + 2);
+    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2 + 2, gameHeight - gridSize / 8 + 4);
     stroke(0);
     strokeWeight(2);
     fill(color(textColor));
-    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2, gameHeight - gridSize / 8);
+    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2, gameHeight - gridSize / 8 + 2);
 }
 
 function drawScoreSlider() {
@@ -421,15 +423,34 @@ function isLocationSelected(x, y)
 
 function drawLetterArray() {
     // outline letter grid
+    // letter grid background
     strokeWeight(3);
-    stroke(0, 40);
     fill(color(gridColor));
+    stroke(0, 40);
+    rect(gridSize, gridSize, gameWidth - gridSize, gameHeight - gridSize * 2);
+
+    // letter grid shading
+    noFill();
+    strokeWeight(3);
+    for (let x = 0; x < 5; x++) {
+        for (let y = 0; y < 5; y++) {
+            stroke(255, 50);
+            rect((x + 1) * gridSize + 2, (y + 1) * gridSize + 2, gridSize, gridSize);
+            stroke(0, 50);
+            rect((x + 1) * gridSize - 2, (y + 1) * gridSize - 2, gridSize, gridSize);
+        }
+    }
+
+    // letter grid outline
+    noFill();
+    stroke(0, 60);
+    strokeWeight(2);
     for (let x = 0; x < 5; x++) {
         for (let y = 0; y < 5; y++) {
             rect((x + 1) * gridSize, (y + 1) * gridSize, gridSize, gridSize);
         }
     }
-
+    
     // draw letters
     textAlign(CENTER, CENTER);
 
@@ -724,9 +745,24 @@ function drawCurrentWord() {
         textSize(textsizeGuess);
     }
     textAlign(CENTER, CENTER);
-    stroke(color(gridColor));
+    // stroke(color(gridColor));
+    // fill(color(textColor));
+    // text(currentWord, gameWidth / 2, 7 * gridSize + 2);
+
+    // hightlight
+    stroke(220, 60);
+    fill(0);
+    strokeWeight(4);
+    text(currentWord, gameWidth / 2 - 1, 7 * gridSize + 1);
+    // dark shadow
+    stroke(0, 70);
+    text(currentWord, gameWidth / 2 + 1, 7 * gridSize + 3);
+    // regular letter
+    stroke(100, 150);
+    strokeWeight(1);
     fill(color(textColor));
-    text(currentWord, gameWidth / 2, 6 * gridSize + gridSize);
+    text(currentWord, gameWidth / 2, 7 * gridSize + 2);
+
 }
 
 function highlightClickTrail() {
@@ -779,6 +815,4 @@ function doGridsTouch(x1, y1, x2, y2) {
 function checkWord(word) {
     return trie.search(word);
 }
-
-
-  
+ 
