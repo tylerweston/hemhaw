@@ -27,6 +27,8 @@ class Trie {
         // Search for a word and allow the use of '*' as a wildcard
         // Maintain a stack of nodes to be checked for a match and add 
         // all children of a node if we reach a wildcard.
+        // Note, when we add the children, we shuffle the order so that
+        // using wildcards will not always result in the same word.
         let stack = [[this.root, 0, '']];
 
         while (stack.length > 0) {
@@ -34,9 +36,12 @@ class Trie {
             if (index === word.length && current.isEnd) return prefix;
             let char = word[index];
             if (char === '*') {
+                let shuffledArray = [];
                 for (let child in current.children) {
-                    stack.push([current.children[child], index + 1, prefix + child]);
+                    shuffledArray.push([current.children[child], index + 1, prefix + child]);
                 }
+                shuffleArray(shuffledArray);
+                stack = stack.concat(shuffledArray);
             } else if (current.children[char]) {
                 stack.push([current.children[char], index + 1, prefix + char]);
             }
@@ -45,3 +50,10 @@ class Trie {
     }
 }
 
+// Durstenfeld shuffle
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}

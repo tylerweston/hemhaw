@@ -12,6 +12,12 @@ and
 /*
 TODO:
 - allow user to unselect trail by backing over already selected blocks?
+- add difficulties, 
+- easy: two minute start, 1 second per point
+- medium: one minute start, 1/2 second per point
+- hard: 30 second start, 1/3 second per point
+- blitz: 5 seconds, 1/s second per points
+- unlimited: no timer, no score
 - add sound effects
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 */
@@ -130,6 +136,10 @@ function loadPalette(index) {
 
 function draw() { 
     // The main loop
+    // if (waitingToStart) {
+        
+    // }
+    
     if (isGameOver) {
         gameOver();
         return;
