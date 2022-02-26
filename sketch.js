@@ -29,6 +29,7 @@ let gameHeight;
 let currentWord = '';
 let clickedTrail = [];
 let lastClicked = [];
+let lastGridPos;
 
 let savedTrail = [];
 let highlightCounter = 0;
@@ -803,6 +804,19 @@ function mouseDragged() {
         return;
     };
     [gridX, gridY] = getClosestSquare();
+    // check if our last gridPos was the last entry in our clickedTrail and our current grid pos is the 
+    // second last entry
+    if (clickedTrail.length > 1 &&
+        clickedTrail[clickedTrail.length - 2][0] === gridX &&
+        clickedTrail[clickedTrail.length - 2][1] === gridY &&
+        clickedTrail[clickedTrail.length - 1][0] === lastClicked[0] &&
+        clickedTrail[clickedTrail.length - 1][1] === lastClicked[1])
+        {
+            clickedTrail.pop();
+            currentWord = currentWord.substring(0, currentWord.length - 1);
+            lastClicked = [gridX, gridY];
+        }
+
     if (gridX >= 0 && gridX <= 4 && gridY >= 0 && gridY <= 4 
         && !isLocationSelected(gridX, gridY) 
         && isMouseCloseToCenterOfSquare(gridX + 1, gridY + 1)) {
@@ -826,7 +840,8 @@ function mouseDragged() {
         let selectedLetter = letterArray[gridX][gridY];
         currentWord += selectedLetter;
         clickedTrail.push([gridX, gridY]);
-    }     
+    }
+    lastGridPos = [gridX, gridY];
     return false;
 }
 
