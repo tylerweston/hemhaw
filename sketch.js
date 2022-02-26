@@ -21,6 +21,17 @@ TODO:
         - Scoring
         - Trail
         - Effects
+- Game States:
+    - Intro
+    - Main Menu
+        - Present difficulty levels
+    - Main Game Countdown
+    - Main Game
+    - End Game Screen
+        - High Score Juice
+        - Retry
+        - Main Menu
+
 - allow user to unselect trail by backing over already selected blocks?
 - add difficulties, 
 - easy: two minute start, 1 second per point
@@ -31,6 +42,11 @@ TODO:
 - add sound effects
 - bonus tile juice, make them pulsate or something like that to look cooler?
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
+- reduce points to a third of a second per point bonus time?
+- clean up arrows, replace the font arrows with nicely drawn ones
+- add an icon to top left so people know about palette change features
+- add more palettes
+- more particle effects and better scoring juice
 */
 let gridSize;
 let gameWidth;
@@ -47,9 +63,15 @@ let highlightColor = '#000000';
 let savedWord = '';
 let scoreJustAdded = 0;
 let scrollTimer = 0;
-const maxScrollTimer = 2000;
+const maxScrollTimer = 2500;
+
+let mainCountdown = 3000;
+
+let gameOverMouseCount = 0;
 
 let trie;
+
+let gameState;
 
 let backgroundColor;
 let correctColor;
@@ -57,17 +79,18 @@ let highlightedSquareColor;
 let textColor;
 let gridColor;
 
-const startingMinutes = 1;
+//const startingMinutes = 1;
 let score = 0;
 let highScore = 0;
 let storedHighscore = 0;
 let gotNewHighscore = false;
 let shownNewHighscore = false;
-let timer = 1000 * 60 * startingMinutes;  //msec * sec * min
+let timer; // = 1000 * 60 * startingMinutes;  //msec * sec * min
 let totalTimePlayed = 0;
 
 let isGameOver = false;
 let eatGameoverClickFlag = false;
+let exitToMainMenuTimer = 0;
 
 const maxHightlightTime = 1000;
 const slidingMaxTime = 200;
@@ -88,6 +111,9 @@ const wordBonusPercentage = 0.05;
 let bonusTiles = [];
 let animatedBonusTiles = [];
 
+let mainMenuNeedUnclick = false;
+let mainMenuClickTimer = 0;
+let mainMenuSelected = 0;
 class BonusTileType {
     static TripleLetter = new BonusTileType('Triple Letter');
     static DoubleLetter = new BonusTileType('Double Letter');
@@ -96,6 +122,100 @@ class BonusTileType {
     constructor(name) {
         this.name = name;
     }
+}
+
+class GameStates {
+    static Intro = new GameStates('Intro');
+    static MainMenu = new GameStates('Main Menu');
+    static Countdown = new GameStates('Countdown');
+    static MainGame = new GameStates('Main Game');
+    static EndGame = new GameStates('End Game');
+}
+
+let gameDifficulty = 0;
+const difficulties = {
+    0: {name: 'easy', minutes: 2, secondPerScore: 1},
+    1: {name: 'medium', minutes: 1, secondPerScore: 0.5},
+    2: {name: 'hard', minutes: 0.5, secondPerScore: 0.25},
+    3: {name: 'blitz', minutes: 0.1, secondPerScore: 0.25},
+    4: {name: 'unlimited', minutes: -1, secondPerScore: 0}
+}
+
+function doMainMenu() {
+    background(0);
+    // main menu is active
+    drawTitle();
+    drawDifficulties();
+    // handle mouse clicks
+    handleMainMenuMouse();
+}
+
+function handleMainMenuMouse() {
+    let selected;
+    if (mouseY > gridSize && mouseY < gridSize * 6) {
+        selected = Math.floor((mouseY - gridSize) / gridSize);
+    }
+    if (!mainMenuNeedUnclick && mouseIsPressed) {
+        mainMenuClickTimer += deltaTime;
+        fill(0, 10);
+        rect(0, 0, gameWidth, gameHeight);
+    } else {
+        mainMenuClickTimer = 0;
+    }
+    if (mainMenuClickTimer > 200) {
+        // select the difficulty from our array
+        gameDifficulty = selected;
+        timer = 1000 * 60 * difficulties[gameDifficulty].minutes;
+        gameState = GameStates.Countdown;
+        return;
+    }
+
+}
+
+function drawDifficulties() {
+    textAlign(CENTER, CENTER);
+    textSize(gridSize);
+    let selected;
+    if (mouseY > gridSize && mouseY < gridSize * 6) {
+        selected = Math.floor((mouseY - gridSize) / gridSize);
+    }
+    for (let i = 0; i < 5; i++) {
+        let difficulty = difficulties[i];
+        let x = gameWidth / 2;
+        let y = (i + 1) * gridSize + gridSize / 2;
+        if (i === selected) {
+            fill(255);
+            stroke(180, 150);
+            strokeWeight(3);
+            text(difficulty.name, x, y);
+        }
+        fill(textColor);
+        noStroke();
+        text(difficulty.name, x, y);
+        if (i === selected) {
+            fill(255, 160);
+            text(difficulty.name, x, y);
+        }
+    }   
+}
+
+function drawTitle() {
+    textAlign(CENTER, CENTER);
+    textSize(gridSize);
+    fill(textColor);
+    noStroke();
+    text('hemhaw', gameWidth / 2, gridSize / 2);
+}
+
+function doIntro() {
+    console.log("Doing intro!");
+    // let introLength = 1000;
+    // let introTimer = 0;
+    // while (introTimer < introLength) {
+    //     introTimer += deltaTime;
+    //     drawTitle();
+    // }
+    gameState = GameStates.MainMenu;
 }
 
 function drawBonusTile(bonusTypeTile, gridX, gridY) {
@@ -320,6 +440,7 @@ function setup() {
         storeItem('highScore', 0);
     }
     printConsoleGreeting();
+    gameState = GameStates.Intro;
 } 
 
 function printConsoleGreeting()
@@ -355,17 +476,33 @@ function loadPalette(index) {
     [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = palette;
 }
 
-function draw() { 
-    // The main loop
-    // if (waitingToStart) {
-        
-    // }
-    
-    if (isGameOver) {
-        gameOver();
-        return;
-    }
+function doCountdown() {
+    // Countdown to the start of the game
+    drawBackground();
+    drawLetterArray();
 
+    drawOutlines();
+
+
+    drawArrows();
+    if (mainCountdown <= 0)
+    {
+        gameState = GameStates.MainGame;
+        return;
+    } 
+    mainCountdown -= deltaTime;
+    textSize(gridSize * 3);
+    textAlign(CENTER, CENTER);
+    fill(textColor);
+    stroke(0);
+    let secs_left = floor(mainCountdown / 1000) + 1;
+    if (secs_left > 0)
+    {
+        text(floor(mainCountdown / 1000) + 1, gameWidth / 2, gameHeight / 2);  
+    }
+}
+
+function doMainGame() {
     runTimers();
     runBonusTiles();
     runAnimatedBonusTiles();
@@ -387,6 +524,48 @@ function draw() {
     drawUI();
     drawScoreSlider();
     drawShading();
+    checkExitGame();
+}
+
+function checkExitGame() {
+    if (!mouseIsPressed || mouseButton != LEFT) return;
+    if (mouseX > gameWidth - gridSize / 2 && mouseY < gridSize / 2) {
+        fill(0, map(exitToMainMenuTimer, 0, 1000, 0, 180));
+        noStroke();
+        rect(0, 0, gameWidth, gameHeight);
+        exitToMainMenuTimer += deltaTime;
+        if (exitToMainMenuTimer > 1000) {
+            mainMenuClickTimer = 0;
+            mainMenuNeedUnclick = true;
+            exitToMainMenuTimer = 0;
+            resetGame();
+            gameState = GameStates.MainMenu;
+        }
+    }
+    else
+    {
+        exitToMainMenuTimer = 0;
+    }
+}
+
+function draw() { 
+    switch (gameState) {
+        case GameStates.Intro:
+            doIntro();
+            break;
+        case GameStates.MainMenu:
+            doMainMenu();
+            break;
+        case GameStates.Countdown:
+            doCountdown();
+            break;
+        case GameStates.MainGame:
+            doMainGame();
+            break;
+        case GameStates.EndGame:
+            gameOver();
+            break;
+    }
 }
 
 function drawDeBroglie() {
@@ -432,7 +611,8 @@ function checkStillClickedArrow()
 
 function runTimers() {
     totalTimePlayed += deltaTime;
-    timer -= deltaTime;
+    if (gameDifficulty !== 4)   // don't countdown in unlimited mode
+        timer -= deltaTime;
     if (doingSlide) {
         slidingTimer += deltaTime;
         if (slidingTimer >= slidingMaxTime) {
@@ -450,7 +630,7 @@ function runTimers() {
             }
         }
     }
-    if (timer <= 0)
+    if (gameDifficulty !== 4 && timer <= 0)
     {
         // this is fired once so we can store high score here
         finalWordCheck();
@@ -466,7 +646,8 @@ function runTimers() {
         {
             eatGameoverClickFlag = true;
         }
-        isGameOver = true;
+        //isGameOver = true;
+        gameState = GameStates.EndGame;
         deBroglieTimer = 0;
     }
     highlightCounter += deltaTime;
@@ -499,7 +680,7 @@ function gameOver()
         text('new high score!', gameWidth / 2, gridSize);
     }
 
-    textSize(gridSize / 2);
+    textSize(gridSize);
     textAlign(CENTER, CENTER);
     stroke(color(backgroundColor));
     fill(color(textColor));
@@ -508,15 +689,54 @@ function gameOver()
     let totalTimeMinutes = floor(totalTimeSecondsRaw / 60);
     let totalTimeSeconds = floor(totalTimeSecondsRaw % 60);
     let totalTimeString = totalTimeMinutes + ':' + nf(totalTimeSeconds, 2);
-    text('click to\nplay again\n\ntotal time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gameHeight / 2);
+    // need to offer choice of either play again or go to main menu
 
+    //text('click to\nplay again\n\ntotal time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gameHeight / 2);
+    //let selected = floor(mouseY / gridSize);
+    if (abs(mouseY - gridSize * 2) < gridSize / 2)  
+        fill(255)
+    else
+        fill(color(textColor));
+
+    text("play again", gameWidth / 2, gridSize * 2);
+
+    if (abs(mouseY - gridSize * 3) < gridSize / 2)
+        fill(255)
+    else
+        fill(color(textColor));
+    text("main menu", gameWidth / 2, gridSize * 3);
+    
+    textSize(gridSize / 2);
+    stroke(color(backgroundColor));
+    fill(color(textColor));
+    strokeWeight(2);
+    text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gridSize * 5);
+    if (mouseIsPressed && mouseButton === LEFT) {
+        gameOverMouseCount += deltaTime;
+        if (gameOverMouseCount > 200) {
+            // if we are over the play again button, start again
+            if (abs(mouseY - gridSize * 2) < gridSize / 2)
+            { 
+                resetGame();
+                gameState = GameStates.MainGame;
+            }
+            if (abs(mouseY - gridSize * 3) < gridSize / 2)
+            { 
+                resetGame();
+                mainMenuNeedUnclick = true;
+                gameState = GameStates.MainMenu;
+            }
+        }
+        fill(255, 50);
+        rect(0, 0, gameWidth, gameHeight);
+    }
 }
 
 function resetGame()
 {
     score = 0;
-    timer = 1000 * 60 * startingMinutes;
-    isGameOver = false;
+    // base timer on difficulty
+    timer = 1000 * 60 * difficulties[gameDifficulty].minutes;//1000 * 60 * startingMinutes;
     currentWord = '';
     clickedTrail = [];
     lastClicked = [];
@@ -533,7 +753,10 @@ function resetGame()
     colSliding = false;
     totalTimePlayed = 0;
     bonusTiles = [];
-    // loadRandomPalette();
+    mainCountdown = 3000;
+    mainMenuClickTimer = 0;
+    gameOverMouseCount = 0;
+    exitToMainMenuTimer = 0;
     makeLetterArray();
 }
 
@@ -606,13 +829,23 @@ function drawUI() {
     strokeWeight(2);
     stroke(180, 30);
 
-    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2 - 2, gameHeight - gridSize / 8 );
+    let txt;
+    if (gameDifficulty === 4)
+    {
+        txt = `Score: ${score}`;
+    }
+    else
+    {
+        txt = `Score: ${score} Timer: ${displayTime}`;
+    }
+
+    text(txt, gameWidth / 2 - 2, gameHeight - gridSize / 8 );
     stroke(0, 30);
-    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2 + 2, gameHeight - gridSize / 8 + 4);
+    text(txt, gameWidth / 2 + 2, gameHeight - gridSize / 8 + 4);
     stroke(0);
     strokeWeight(2);
     fill(color(textColor));
-    text('Score: ' + score + " Timer: " + displayTime, gameWidth / 2, gameHeight - gridSize / 8 + 2);
+    text(txt, gameWidth / 2, gameHeight - gridSize / 8 + 2);
 }
 
 function drawScoreSlider() {
@@ -834,10 +1067,20 @@ function slideLine(row, col, direction) {
 }
 
 function mousePressed() {
+    // if (gameState === GameStates.EndGame) {
+    //     gameOverMouseCount += deltaTime;
+    //     if (gameOverMouseCount > 200) {
+    //         resetGame();
+    //         gameState = GameStates.MainGame;
+    //     }
+    //     fill(0, 10);
+    //     rect(0, 0, gameWidth, gameHeight);
+    // }
     // TODO: Allow right click to move a line the opposite direction?
     if (mouseX < gridSize / 2 && mouseY < gridSize / 2) {
         loadRandomPalette();
     }
+
     // check if we are in the leftmost or rightmost column
     let x = floor(mouseX / gridSize);
     let y = floor(mouseY / gridSize);
@@ -949,17 +1192,20 @@ function getClosestSquare() {
 }
 
 function mouseReleased() {
-    if (isGameOver && !eatGameoverClickFlag)
-    {
-        eatGameoverClickFlag = false;
-        resetGame();
-        return;
-    }
-    else
-    {
-        eatGameoverClickFlag = false;
-    }
-    doWordCheck();
+    // if (gameState === GameStates.EndGame && !eatGameoverClickFlag)
+    // {
+    //     eatGameoverClickFlag = false;
+    //     resetGame();
+    //     return;
+    // }
+    // else
+    // {
+    //     eatGameoverClickFlag = false;
+    // }
+    if (mainMenuNeedUnclick)
+        mainMenuNeedUnclick = false;
+    if (gameState === GameStates.MainGame)
+        doWordCheck();
 }
 
 function scoreWordWithBonus(word) {
@@ -1034,7 +1280,8 @@ function doWordCheck() {
         scoreJustAdded = scoreWordWithBonus(currentWord);
         scrollTimer = 0;
         score += scoreJustAdded;
-        timer += (scoreJustAdded * 500);    // half second per point
+        //timer += (scoreJustAdded * 500);    // half second per point
+        timer += scoreJustAdded * 1000 * difficulties[gameDifficulty].secondPerScore;
         if (score > highScore)
         {
             highScore = score;
