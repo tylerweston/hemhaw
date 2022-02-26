@@ -19,6 +19,7 @@ TODO:
 - blitz: 5 seconds, 1/s second per points
 - unlimited: no timer, no score
 - add sound effects
+- bonus tile juice, make them pulsate or something like that to look cooler?
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 */
 let gridSize;
@@ -68,6 +69,154 @@ let originalArrowX = 0;
 let originalArrowY = 0;
 
 let deBroglieTimer = 0;
+
+const letterBonusPercentage = 0.1;
+const wordBonusPercentage = 0.05;
+let bonusTiles = [];
+
+class BonusTileType {
+    static TripleLetter = new BonusTileType('Triple Letter');
+    static DoubleLetter = new BonusTileType('Double Letter');
+    static TripleWord = new BonusTileType('Triple Word');
+    static DoubleWord = new BonusTileType('Double Word');
+    constructor(name) {
+        this.name = name;
+    }
+}
+
+function drawBonusTile(bonusTypeTile, gridX, gridY) {
+    textAlign(CENTER, CENTER);
+    let outlineColor;
+    let fillColor;
+    let realX = gridX + 1;
+    let realY = gridY + 1;
+    let bonusText;
+    switch (bonusTypeTile) 
+    {
+        case BonusTileType.TripleLetter:
+            outlineColor = '#0000FF';
+            fillColor = '#4DA5B9';
+            bonusText = '3L';
+            break;
+        case BonusTileType.DoubleLetter:
+            outlineColor = '#0000FF';
+            fillColor = '#B9D6D2';
+            bonusText = '2L';
+            break;
+        case BonusTileType.TripleWord:
+            outlineColor = '#FF0000';
+            fillColor = '#FD462E';
+            bonusText = '3W';
+            break;
+        case BonusTileType.DoubleWord:
+            outlineColor = '#FF0000';
+            fillColor = '#F0BAAC';
+            bonusText = '2W';
+            break;
+    }
+    let outlineClr = color(outlineColor);
+    outlineClr.setAlpha(140);
+    let fillClr = color(fillColor);
+    fillClr.setAlpha(130);
+    stroke(outlineClr);
+    strokeWeight(2);
+    fill(color(fillClr));
+    rect(realX * gridSize, realY * gridSize, gridSize, gridSize);
+
+    fill(0, 130);
+    let gridEigth = gridSize / 8;
+    textSize(gridSize / 6);
+    text(bonusText, 
+        realX * gridSize + gridEigth,
+        (realY + 1) * gridSize - gridEigth);
+}
+
+
+function runBonusTiles() {
+    for (let i = bonusTiles.length - 1; i >= 0; i--)
+    {
+        let [bonusType, bonusX, bonusY, bonusTime] = bonusTiles[i];
+        bonusTime -= deltaTime;
+        bonusTiles[i][3] = bonusTime;   // write back to tile
+        if (bonusTime < 0)
+        {
+            bonusTime = 0;
+            bonusTiles.splice(i, 1);
+        }
+    }
+}
+
+function drawBonusTiles() {
+    for (let i = 0; i < bonusTiles.length; i++) 
+    {
+        let [bonusType, bonusX, bonusY, bonusTime] = bonusTiles[i];
+        if (bonusTime > 0)
+        {    
+            drawBonusTile(bonusType, bonusX, bonusY);
+        }
+    }
+}
+
+function makeBonusTiles() {
+    // on every frame, we have a small chance to generate a bonus tile
+    let chance = Math.random() * 100;
+    let extraBonus = Math.random();
+    if (chance > wordBonusPercentage + letterBonusPercentage) return;
+    // find a place to put the tile
+    let xGuess; 
+    let yGuess; 
+    while (true)
+    {
+        xGuess = floor(Math.random() * 5);
+        yGuess = floor(Math.random() * 5);
+        let emptySpace = true;
+        for (let i = 0; i < bonusTiles.length; i++)
+        {
+            let [bonusType, bonusX, bonusY, bonusTime] = bonusTiles[i];
+            if (bonusX == xGuess && bonusY == yGuess)
+            {
+                emptySpace = false;
+                break;
+            }
+        }
+        if (emptySpace)
+        {
+            break;
+        }
+    }
+    // OK, now we have a place to put the tile
+    let tileType;
+    let lifeSpan;
+
+    if (chance < wordBonusPercentage)
+    {
+        if (extraBonus < 0.33)
+        {
+            tileType = BonusTileType.TripleWord;
+            lifeSpan = 7500;
+        }
+        else
+        {
+            tileType = BonusTileType.DoubleWord;
+            lifeSpan = 15000;
+        }
+    }
+    else if (chance < wordBonusPercentage + letterBonusPercentage)
+    {
+        if (extraBonus < 0.33)
+        {
+            tileType = BonusTileType.TripleLetter;
+            lifeSpan = 10000;
+        }
+        else
+        {
+            tileType = BonusTileType.DoubleLetter;
+            lifeSpan = 20000;
+        }
+    }
+    // continue
+    bonusTiles.push([tileType, xGuess, yGuess, lifeSpan]);
+}
 
 function setup() { 
     gridSize = Math.min(windowWidth / 7, windowHeight / 8) * 0.95;
@@ -146,10 +295,13 @@ function draw() {
     }
 
     runTimers();
+    runBonusTiles();
+    makeBonusTiles();
 
     // Draw Layers
     drawBackground();
     drawLetterArray();
+
     drawOutlines();
     drawArrows();
     drawHighlights();
@@ -303,6 +455,7 @@ function resetGame()
     rowSliding = false;
     colSliding = false;
     totalTimePlayed = 0;
+    bonusTiles = [];
     // loadRandomPalette();
     makeLetterArray();
 }
@@ -460,6 +613,8 @@ function drawLetterArray() {
             rect((x + 1) * gridSize - 2, (y + 1) * gridSize - 2, gridSize, gridSize);
         }
     }
+
+    drawBonusTiles();
 
     // letter grid outline
     noFill();
@@ -708,11 +863,72 @@ function mouseReleased() {
     doWordCheck();
 }
 
+function scoreWordWithBonus(word) {
+    let rawScore = scoreWord(word);
+    // check each location along the path for a bonus
+    for (let i = 0; i < clickedTrail.length; i++) 
+    {
+        let [x, y] = clickedTrail[i];
+        let letter = letterArray[x][y];
+        // First apply extra letter bonuses, then word bonuses
+        for (let j = 0; j < bonusTiles.length; j++) 
+        {
+            let [bonusType, bonusX, bonusY, _] = bonusTiles[j];
+            if (bonusX === x && bonusY === y) 
+            {
+                switch (bonusType) 
+                {
+                    case BonusTileType.TripleLetter:
+                        rawScore += (2 * getScore(letter))
+                        break;
+                    case BonusTileType.DoubleLetter:
+                        rawScore += getScore(letter);
+                        break;
+                }
+            }
+        }
+        // Apply word bonuses
+        for (let j = 0; j < bonusTiles.length; j++) 
+        {
+            let [bonusType, bonusX, bonusY, _] = bonusTiles[j];
+            if (bonusX === x && bonusY === y) 
+            {
+                switch (bonusType) 
+                {
+                    case BonusTileType.TripleWord:
+                        rawScore *= 3;
+                        break;
+                    case BonusTileType.DoubleWord:
+                        rawScore *= 2;
+                        break;
+                }
+            }
+        }
+    }
+    return rawScore;
+}
+
+function dropBonuses(trail) {
+    // drop bonuses on the board
+    for (let i = 0; i < trail.length; i++)
+    {
+        let [x, y] = trail[i];
+        for (let j = bonusTiles.length - 1; j >= 0; j--)
+        {
+            let [_, bonusX, bonusY, __] = bonusTiles[j];
+            if (bonusX === x && bonusY === y)
+            {
+                bonusTiles.splice(j, 1);
+            }
+        }
+    }
+}
+
 function doWordCheck() {
     let isWord = checkWord(currentWord);
     if (isWord) {
         highlightColor = '#00EE00';
-        scoreJustAdded = scoreWord(currentWord);
+        scoreJustAdded = scoreWordWithBonus(currentWord);
         scrollTimer = 0;
         score += scoreJustAdded;
         timer += (scoreJustAdded * 500);    // half second per point
@@ -721,6 +937,7 @@ function doWordCheck() {
             highScore = score;
         }
         removeLetters(clickedTrail);
+        dropBonuses(clickedTrail);
         replaceLetters();
         // dropLetters();
         savedWord = isWord;
@@ -743,7 +960,7 @@ function finalWordCheck()
 {
     let isWord = checkWord(currentWord);
     if (!isWord) return;
-    let newScore = scoreWord(currentWord);
+    let newScore = scoreWordWithBonus(currentWord);
     score += newScore;
     if (score > highScore)
     {
