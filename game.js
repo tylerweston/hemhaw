@@ -8,6 +8,7 @@ const consonants=['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q
 const letterPoints = [1, 3, 3, 2, 1, 4, 2, 4, 1, 8, 5, 1, 3, 1, 1, 3, 10, 1, 1, 1, 1, 4, 4, 8, 4, 10];
 
 let letterArray = [[], [], [], [], []];
+let letterFadeGrid = [[], [], [], [], []];
 const vowelToConsonantRatio = 0.45;
 const wildcardPercent = 0.1;
 
@@ -15,6 +16,8 @@ function makeLetterArray() {
     for (let x = 0; x < 5; x++) {
         for (let y = 0; y < 5; y++) {
             letterArray[x][y] = getRandomCharacter();
+            let randomFadeAmt = random(150, 250);
+            letterFadeGrid[x][y] = [randomFadeAmt, randomFadeAmt];
         }
     }
 }
@@ -59,6 +62,8 @@ function replaceLetters() {
         for (let y = 0; y < 5; y++) {
             if (letterArray[x][y] === '') {
                 letterArray[x][y] = getRandomCharacter();
+                let randomFadeAmt = random(150, 250);
+                letterFadeGrid[x][y] = [randomFadeAmt, randomFadeAmt];
             }
         }
     }

@@ -11,6 +11,16 @@ and
 
 /*
 TODO:
+- REFACTOR. Getting big enough that it will be worth refactoring to make it more maintanable in the future.
+    - Rewrite things as classes
+        - Tiles
+        - Board
+        - Player
+        - Game
+        - States
+        - Scoring
+        - Trail
+        - Effects
 - allow user to unselect trail by backing over already selected blocks?
 - add difficulties, 
 - easy: two minute start, 1 second per point
@@ -73,7 +83,10 @@ let deBroglieTimer = 0;
 
 const letterBonusPercentage = 0.1;
 const wordBonusPercentage = 0.05;
+// const letterBonusPercentage = 1;
+// const wordBonusPercentage = 1;
 let bonusTiles = [];
+let animatedBonusTiles = [];
 
 class BonusTileType {
     static TripleLetter = new BonusTileType('Triple Letter');
@@ -128,10 +141,68 @@ function drawBonusTile(bonusTypeTile, gridX, gridY) {
     let gridEigth = gridSize / 8;
     textSize(gridSize / 6);
     text(bonusText, 
-        realX * gridSize + gridEigth,
+        realX * gridSize + gridEigth + 2,
         (realY + 1) * gridSize - gridEigth);
 }
 
+function drawAnimatedBonusTiles() {
+    for (let i = 0; i < animatedBonusTiles.length; i++) 
+    {
+        let [bonusType, bonusX, bonusY, bonusTime, bonusTarget] = animatedBonusTiles[i];
+        drawAnimatedBonusTile(bonusType, bonusX, bonusY, bonusTime, bonusTarget);
+    }
+}
+
+function drawAnimatedBonusTile(bonusTypeTile, gridX, gridY, bonusTime, bonusTarget) {
+    // we draw a square and change the color based on the time left
+    let outlineColor;
+    let fillColor;
+    switch (bonusTypeTile) 
+    {
+        case BonusTileType.TripleLetter:
+            outlineColor = '#0000FF';
+            fillColor = '#4DA5B9';
+            break;
+        case BonusTileType.DoubleLetter:
+            outlineColor = '#0000FF';
+            fillColor = '#B9D6D2';
+            break;
+        case BonusTileType.TripleWord:
+            outlineColor = '#FF0000';
+            fillColor = '#FD462E';
+            break;
+        case BonusTileType.DoubleWord:
+            outlineColor = '#FF0000';
+            fillColor = '#F0BAAC';
+            break;
+    }
+    let alphaAmt = map(bonusTime, 0, bonusTarget, 0, 100);
+    let outlineClr = color(outlineColor);
+    outlineClr.setAlpha(alphaAmt);
+    let fillClr = color(fillColor);
+    fillClr.setAlpha(alphaAmt);
+    let shrinkSize = map(bonusTime, 0, bonusTarget, gridSize * 2, 0);
+    stroke(outlineClr);
+    strokeWeight(2);
+    fill(color(fillClr));
+    rect((gridX + 1) * gridSize - shrinkSize, 
+        (gridY + 1) * gridSize - shrinkSize, 
+        gridSize + shrinkSize * 2, 
+        gridSize + shrinkSize * 2);
+}
+
+function runAnimatedBonusTiles() {
+    for (let i = animatedBonusTiles.length - 1; i >= 0; i--)
+    {
+        let [bonusType, bonusX, bonusY, bonusTime, bonusTarget] = animatedBonusTiles[i];
+        bonusTime -= deltaTime;
+        animatedBonusTiles[i][3] = bonusTime;   // write back to tile
+        if (bonusTime <= 0)
+        {
+            animatedBonusTiles.splice(i, 1);
+        }
+    }
+}
 
 function runBonusTiles() {
     for (let i = bonusTiles.length - 1; i >= 0; i--)
@@ -297,6 +368,7 @@ function draw() {
 
     runTimers();
     runBonusTiles();
+    runAnimatedBonusTiles();
     makeBonusTiles();
 
     // Draw Layers
@@ -304,9 +376,13 @@ function draw() {
     drawLetterArray();
 
     drawOutlines();
+
+
     drawArrows();
+
     drawHighlights();
     highlightClickTrail();
+    drawAnimatedBonusTiles();
     drawCurrentWord();
     drawUI();
     drawScoreSlider();
@@ -488,7 +564,7 @@ function drawArrows() {
     let arrowSize = gridSize / 2;
     textAlign(CENTER, CENTER);
     textSize(arrowSize);
-
+    stroke(color(gridColor));
     for (let y = 1; y <= 5; y++) {
         if (isMouseCloseToCenterOfSquare(0, y)) {
             fill(color(correctColor));
@@ -720,8 +796,16 @@ function drawLetterArray() {
             text(score, 
                 (x + 2) * gridSize - gridEigth + xOffset, 
                 (y + 2) * gridSize - gridEigth + yOffset);
+            if (letterFadeGrid[x][y][0] > 0) {
+                letterFadeGrid[x][y][0] -= deltaTime;
+                let alph = map(letterFadeGrid[x][y][0], 0, letterFadeGrid[x][y][1], 0, 200);
+                fill(0, alph);
+                noStroke();
+                rect((x + 1) * gridSize, (y + 1) * gridSize, gridSize, gridSize);
+            }
         }
     }
+
 }
 
 function slideLine(row, col, direction) {
@@ -853,7 +937,7 @@ function isMouseCloseToCenterOfSquare(gridX, gridY) {
     let dx = mouseX - x;
     let dy = mouseY - y;
     let dist = sqrt(dx * dx + dy * dy);
-    return dist < gridSize / 2;
+    return dist < gridSize / 2.5;
 }
 
 function getClosestSquare() {
@@ -930,10 +1014,14 @@ function dropBonuses(trail) {
         let [x, y] = trail[i];
         for (let j = bonusTiles.length - 1; j >= 0; j--)
         {
-            let [_, bonusX, bonusY, __] = bonusTiles[j];
+            let [bonusType, bonusX, bonusY, __] = bonusTiles[j];
             if (bonusX === x && bonusY === y)
             {
                 bonusTiles.splice(j, 1);
+                // we also create an animated tile here
+                let randomLife = random(150, 300);
+                let tile = [bonusType, bonusX, bonusY, randomLife, randomLife];
+                animatedBonusTiles.push(tile);
             }
         }
     }
