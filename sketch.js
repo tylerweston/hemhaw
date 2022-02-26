@@ -412,7 +412,10 @@ function drawHighlights() {
             textSize(textsizeGuess);
         }
         textAlign(CENTER, CENTER);
-        noStroke();
+
+        //noStroke();
+        stroke(highlightColorAlpha);
+        strokeWeight(3);
         fill(highlightColorAlpha);
         text(savedWord.toUpperCase(), gameWidth / 2, 6 * gridSize + gridSize);
     }
