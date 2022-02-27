@@ -123,8 +123,8 @@ class GameStates {
 
 let gameDifficulty = 0;
 const difficulties = {
-    0: {name: 'easy', minutes: 2, secondPerScore: 1},
-    1: {name: 'medium', minutes: 1, secondPerScore: 0.5},
+    0: {name: 'easy', minutes: 2, secondPerScore: 0.5},
+    1: {name: 'medium', minutes: 1, secondPerScore: 0.33},
     2: {name: 'hard', minutes: 0.5, secondPerScore: 0.25},
     3: {name: 'blitz', minutes: 0.1, secondPerScore: 0.25},
     4: {name: 'unlimited', minutes: -1, secondPerScore: 0}
@@ -535,6 +535,7 @@ function doCountdown() {
 
 
     drawArrows();
+    drawUI();
     if (mainCountdown <= 0)
     {
         gameState = GameStates.MainGame;
@@ -545,9 +546,11 @@ function doCountdown() {
 
 
     let secs_left = floor(mainCountdown / 1000) + 1;
-    if (secs_left > 0)
+    if (secs_left >= 0)
     {
         let t = floor(mainCountdown / 1000) + 1;
+        if (secs_left === 0)
+            t = "GO!";
         textSize(gridSize * 3);
         textAlign(CENTER, CENTER);
         fill(255, 150);
@@ -555,6 +558,8 @@ function doCountdown() {
         stroke(255, 80);
         text(t, gameWidth / 2, gameHeight / 2);
         fill(textColor);
+        if (secs_left === 0)
+            fill(255);
         stroke(0);
         strokeWeight(2);
         text(t, gameWidth / 2, gameHeight / 2);  
@@ -785,7 +790,7 @@ function gameOver()
     stroke(color(backgroundColor));
     fill(color(textColor));
     strokeWeight(2);
-    let totalTimeSecondsRaw = floor(totalTimePlayed / 1000) - 1;
+    let totalTimeSecondsRaw = floor(totalTimePlayed / 1000);
     let totalTimeMinutes = floor(totalTimeSecondsRaw / 60);
     let totalTimeSeconds = floor(totalTimeSecondsRaw % 60);
     let totalTimeString = totalTimeMinutes + ':' + nf(totalTimeSeconds, 2);
@@ -1002,7 +1007,7 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
 }
 
 function drawUI() {
-    let displayTimeRaw = int(timer / 1000);
+    let displayTimeRaw = floor(timer / 1000);
     let minutes = floor(displayTimeRaw / 60);
     let seconds = displayTimeRaw % 60;
     let displayTime = minutes + ':' + nf(seconds, 2);
