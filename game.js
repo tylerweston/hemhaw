@@ -16,7 +16,7 @@ function makeLetterArray() {
     for (let x = 0; x < 5; x++) {
         for (let y = 0; y < 5; y++) {
             letterArray[x][y] = getRandomCharacter();
-            let randomFadeAmt = random(150, 250);
+            let randomFadeAmt = random(250, 350);
             letterFadeGrid[x][y] = [randomFadeAmt, randomFadeAmt];
         }
     }
@@ -62,7 +62,7 @@ function replaceLetters() {
         for (let y = 0; y < 5; y++) {
             if (letterArray[x][y] === '') {
                 letterArray[x][y] = getRandomCharacter();
-                let randomFadeAmt = random(150, 250);
+                let randomFadeAmt = random(250, 350);
                 letterFadeGrid[x][y] = [randomFadeAmt, randomFadeAmt];
             }
         }

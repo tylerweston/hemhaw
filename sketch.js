@@ -21,16 +21,12 @@ TODO:
         - Scoring
         - Trail
         - Effects
-- why is sometimes a square selected when you start a game?
-- also, sometimes a row or column scrolls when it isn't supposed to
-  at the start of the game.
-- allow user to unselect trail by backing over already selected blocks?
-- add difficulties, 
 - easy: two minute start, 1 second per point
 - medium: one minute start, 1/2 second per point
 - hard: 30 second start, 1/3 second per point
 - blitz: 5 seconds, 1/s second per points
 - unlimited: no timer, no score
+
 - add sound effects
 - bonus tile juice, make them pulsate or something like that to look cooler?
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
@@ -65,6 +61,7 @@ let trie;
 
 let gameState;
 
+// palette data
 let backgroundColor;
 let correctColor;
 let highlightedSquareColor;
@@ -95,6 +92,7 @@ let originalArrowY = 0;
 
 let deBroglieTimer = 0;
 
+// note these have to add up to 100 maximum
 const letterBonusPercentage = 0.1;
 const wordBonusPercentage = 0.05;
 
@@ -132,10 +130,13 @@ const difficulties = {
     4: {name: 'unlimited', minutes: -1, secondPerScore: 0}
 }
 
+// Track highscores across the 4 levels
 let highScores = [0, 0, 0, 0];
 
 function doMainMenu() {
-    background(0);
+
+    fill(0, 10);
+    rect(0, 0, gameWidth, gameHeight);
     // main menu is active
     drawTitle();
     drawDifficulties();
@@ -164,7 +165,7 @@ function handleMainMenuMouse() {
     }
     if (!mainMenuNeedUnclick && mouseIsPressed) {
         mainMenuClickTimer += deltaTime;
-        fill(0, 10);
+        fill(255, 20);
         rect(0, 0, gameWidth, gameHeight);
     } else {
         mainMenuClickTimer = 0;
@@ -219,21 +220,26 @@ function drawTitle() {
     text('hemhaw', gameWidth / 2, gridSize / 2 + gridSize);
 }
 
+let introLength = 1000;
+let introTimer; // = 0;
 function doIntro() {
+    // have 6 rows of random letters, make sure we can
+    // spell hemyhaw with them, shuffle them up by 
+    // running them backwards a couple times, then
+    // shuffle them forward so that it says hemhaw
+    // and tylerw
     console.log("Doing intro!");
-    // let introLength = 1000;
-    // let introTimer = 0;
-    // while (introTimer < introLength) {
-    //     introTimer += deltaTime;
-    //     drawTitle();
-    // }
-    gameState = GameStates.MainMenu;
+    introTimer += deltaTime;
+    drawTitle();
+    if (introTimer > introLength) {
+        gameState = GameStates.MainMenu;
+    }
 }
 
 function drawBonusTile(bonusTypeTile, gridX, gridY, bonusTime) {
     textAlign(CENTER, CENTER);
-    let outlineColor;
-    let fillColor;
+    // let outlineColor;
+    // let fillColor;
     let realX = gridX + 1;
     let realY = gridY + 1;
     let bonusText;
@@ -261,19 +267,27 @@ function drawBonusTile(bonusTypeTile, gridX, gridY, bonusTime) {
             break;
     }
     let alph = 140;
-    if (bonusTime < 100)
+    if (bonusTime < 150)
     {
         alph = map(bonusTime, 0, 100, 0, 140);
+        strokeWeight(2);
+    }
+    else
+    {
+        alph += sin(bonusTime * 0.005) * 30;
+        strokeWeight(2 + cos(bonusTime * 0.0001) * 2);
+
     }
     let outlineClr = color(outlineColor);
     outlineClr.setAlpha(alph);
     let fillClr = color(fillColor);
     fillClr.setAlpha(alph);
     stroke(outlineClr);
-    strokeWeight(2);
+
     fill(color(fillClr));
     rect(realX * gridSize, realY * gridSize, gridSize, gridSize);
 
+    strokeWeight(2);
     fill(0, 130);
     let gridEigth = gridSize / 8;
     textSize(gridSize / 6);
@@ -322,10 +336,37 @@ function drawAnimatedBonusTile(bonusTypeTile, gridX, gridY, bonusTime, bonusTarg
     stroke(outlineClr);
     strokeWeight(2);
     fill(color(fillClr));
-    rect((gridX + 1) * gridSize - shrinkSize, 
-        (gridY + 1) * gridSize - shrinkSize, 
+    let realX = gridX + 1;
+    let realY = gridY + 1;
+    rect(realX * gridSize - shrinkSize, 
+        realY * gridSize - shrinkSize, 
         gridSize + shrinkSize * 2, 
         gridSize + shrinkSize * 2);
+
+    // TODO: This DOES NOT WORK since X/Y is NOT in the middle
+    // of the screen, we can't just grow the square out symmetrically
+    // have to figure out a better way to do this!
+
+    // noStroke();
+    // let smallShrink = map(bonusTime, 0, bonusTarget, gridSize, 0);
+    // let widthGrow = 0;
+    // let heightGrow = 0;
+    // if (bonusTime > bonusTarget - 250)
+    // {
+    //     widthGrow = map(bonusTime, bonusTarget - 250, bonusTarget, gameWidth / 2 , 0);
+    //     heightGrow = map(bonusTime, bonusTarget - 250, bonusTarget, gameHeight / 2, 0);
+    // }
+    // console.log(`bonusTime: ${bonusTime} / bonusTarget: ${bonusTarget}`);
+    // console.log(`widthGrow: ${widthGrow} heightGrow: ${heightGrow}`);
+    // rect(gameWidth / 2 - widthGrow, 
+    //     realY * gridSize + smallShrink / 2, 
+    //     widthGrow * 2, 
+    //     gridSize - smallShrink);
+
+    // rect(realX * gridSize + smallShrink / 2, 
+    //     gameHeight / 2 - heightGrow, 
+    //     gridSize - smallShrink, 
+    //     heightGrow * 2);
 }
 
 function runAnimatedBonusTiles() {
@@ -447,6 +488,8 @@ function setup() {
     }
     loadHighscores();
     printConsoleGreeting();
+    introTimer = 0;
+    background(0);
     gameState = GameStates.Intro;
 } 
 
@@ -978,9 +1021,11 @@ function drawLetterArray() {
     let xSelected = floor((mouseX - gridSize) / gridSize);
     let ySelected = floor((mouseY - gridSize) / gridSize);
     noFill();
-    strokeWeight(8);
-    stroke(210, 90);
-    rect((xSelected + 1) * gridSize, (ySelected + 1) * gridSize, gridSize, gridSize);
+    strokeWeight(4);
+    stroke(210, 80);
+    rect((xSelected + 1) * gridSize + 2, 
+        (ySelected + 1) * gridSize + 2, 
+        gridSize - 4, gridSize - 4);
 
     drawBonusTiles();
 
@@ -1125,10 +1170,10 @@ function slideLine(row, col, direction) {
 }
 
 function mousePressed() {
-    if (gameState !== GameStates.MainGame) return;
     if (mouseX < gridSize / 2 && mouseY < gridSize / 2) {
         loadRandomPalette();
     }
+    if (gameState !== GameStates.MainGame) return;
 
     // check if we are in the leftmost or rightmost column
     let x = floor(mouseX / gridSize);
