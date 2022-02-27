@@ -540,7 +540,11 @@ function doMainGame() {
 
 function checkExitGame() {
     if (gameState !== GameStates.MainGame) return;
-    if (!mouseIsPressed || mouseButton != LEFT) return;
+    if (!mouseIsPressed || mouseButton != LEFT) 
+    {
+        exitToMainMenuTimer = 0;
+        return;
+    }
     if (mouseX > gameWidth - gridSize / 2 && mouseY < gridSize / 2) {
         fill(0, map(exitToMainMenuTimer, 0, 1000, 0, 180));
         noStroke();
