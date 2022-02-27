@@ -228,7 +228,7 @@ function doIntro() {
     // running them backwards a couple times, then
     // shuffle them forward so that it says hemhaw
     // and tylerw
-    console.log("Doing intro!");
+    // console.log("Doing intro!");
     introTimer += deltaTime;
     drawTitle();
     if (introTimer > introLength) {
@@ -558,6 +558,13 @@ function doCountdown() {
         stroke(0);
         strokeWeight(2);
         text(t, gameWidth / 2, gameHeight / 2);  
+        if (mainCountdown % 1000 > 800)
+        {
+            let extraB = map(mainCountdown % 1000, 1000, 800, 255, 0);
+            fill(255, extraB);
+            noStroke();
+            text(t, gameWidth / 2, gameHeight / 2);
+        }
     }
 }
 
@@ -887,7 +894,6 @@ function drawArrows() {
     // instead of all these calls to isMouseCloseTpCenterOfSquare!
     let mouseXGrid = floor(mouseX / gridSize);
     let mouseYGrid = floor(mouseY / gridSize);
-    // let doExtraHighlight = mouseIsPressed;
     for (let y = 1; y <= 5; y++) {
         let illuminated = mouseIsPressed && doingSlide && mouseYGrid - 1 === rowSliding;
         drawArrow(0, y, 'right', mouseXGrid === 0 && mouseYGrid === y, illuminated);
@@ -912,7 +918,6 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
     let realX = xPosition * gridSize;
     let realY = yPosition * gridSize;
 
-    //rect(realX, realY, gridSize, gridSize);
     let halfGridsize = gridSize / 2;
     let p1;
     let p2;
