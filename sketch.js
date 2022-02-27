@@ -170,6 +170,11 @@ function handleMainMenuMouse() {
         mainMenuClickTimer = 0;
     }
     if (mainMenuClickTimer > 200) {
+        if (!(mouseY > gridSize * 2 && mouseY < gridSize * 7))
+        {
+            mainMenuClickTimer = 0;
+            return;
+        }
         // select the difficulty from our array
         gameDifficulty = selected;
         timer = 1000 * 60 * difficulties[gameDifficulty].minutes;
@@ -525,6 +530,7 @@ function doMainGame() {
 }
 
 function checkExitGame() {
+    if (gameState !== GameStates.MainGame) return;
     if (!mouseIsPressed || mouseButton != LEFT) return;
     if (mouseX > gameWidth - gridSize / 2 && mouseY < gridSize / 2) {
         fill(0, map(exitToMainMenuTimer, 0, 1000, 0, 180));
@@ -626,7 +632,9 @@ function checkStillClickedArrow()
 }
 
 function runTimers() {
-    totalTimePlayed += deltaTime;
+    if (gameState === GameStates.MainGame) {
+        totalTimePlayed += deltaTime;
+    }
     if (gameDifficulty !== 4)   // don't countdown in unlimited mode
         timer -= deltaTime;
     if (doingSlide) {
@@ -724,7 +732,7 @@ function gameOver()
     fill(color(textColor));
     strokeWeight(2);
     text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScores[gameDifficulty], gameWidth / 2, gridSize * 5);
-    if (mouseIsPressed && mouseButton === LEFT) {
+    if (mouseIsPressed && mouseButton === LEFT && !eatGameoverClickFlag) {
         gameOverMouseCount += deltaTime;
         if (gameOverMouseCount > 200) {
             // if we are over the play again button, start again
@@ -1087,6 +1095,8 @@ function slideLine(row, col, direction) {
 }
 
 function mousePressed() {
+    if (gameState === GameStates.Countdown) return;
+    
     // if (gameState === GameStates.EndGame) {
     //     gameOverMouseCount += deltaTime;
     //     if (gameOverMouseCount > 200) {
@@ -1139,6 +1149,7 @@ function mousePressed() {
 }
 
 function mouseDragged() {
+    if (gameState !== GameStates.MainGame) return;
     if (mouseX < gridSize || 
         mouseY < gridSize || 
         mouseX > gameWidth - gridSize || 
@@ -1294,7 +1305,7 @@ function dropBonuses(trail) {
             {
                 bonusTiles.splice(j, 1);
                 // we also create an animated tile here
-                let randomLife = random(150, 300);
+                let randomLife = random(350, 500);
                 let tile = [bonusType, bonusX, bonusY, randomLife, randomLife];
                 animatedBonusTiles.push(tile);
             }
