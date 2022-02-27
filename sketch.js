@@ -698,6 +698,15 @@ function runTimers() {
     }
     if (gameDifficulty !== 4)   // don't countdown in unlimited mode
         timer -= deltaTime;
+    else
+    {
+        // still need an animation timer
+        timer += deltaTime;
+        if (timer >= 1000)
+        {
+            timer = 0;
+        }
+    }
     if (doingSlide) {
         slidingTimer += deltaTime;
         if (slidingTimer >= slidingMaxTime) {
@@ -874,33 +883,20 @@ function drawArrows() {
     textAlign(CENTER, CENTER);
     textSize(arrowSize);
     stroke(color(gridColor));
+    // get mouse square here and use that to figure out which arrow to illuminate
+    // instead of all these calls to isMouseCloseTpCenterOfSquare!
+    let mouseXGrid = floor(mouseX / gridSize);
+    let mouseYGrid = floor(mouseY / gridSize);
+    // let doExtraHighlight = mouseIsPressed;
     for (let y = 1; y <= 5; y++) {
-        if (isMouseCloseToCenterOfSquare(0, y)) {
-            fill(color(correctColor));
-        } else {
-            fill(color(textColor));
-        }
-        text('>', gridSize / 2, gridSize * y + gridSize / 2);
-        if (isMouseCloseToCenterOfSquare(6, y)) {
-            fill(color(correctColor));
-        } else {
-            fill(color(textColor));
-        }
-        text('<', gridSize * 6 + gridSize / 2, gridSize * y + gridSize / 2);
+        let illuminated = mouseIsPressed && doingSlide && mouseYGrid - 1 === rowSliding;
+        drawArrow(0, y, 'right', mouseXGrid === 0 && mouseYGrid === y, illuminated);
+        drawArrow(6, y, 'left', mouseXGrid === 6 && mouseYGrid === y, illuminated);
     }
     for (let x = 1; x <= 5; x++) {
-        if (isMouseCloseToCenterOfSquare(x, 0)) {
-            fill(color(correctColor));
-        } else {
-            fill(color(textColor));
-        }
-        text('v', gridSize * x + gridSize / 2, gridSize / 2);
-        if (isMouseCloseToCenterOfSquare(x, 6)) {
-            fill(color(correctColor));
-        } else {
-            fill(color(textColor));
-        }
-        text('^', gridSize * x + gridSize / 2, gridSize * 6 + gridSize / 2);
+        let illuminated = mouseIsPressed && doingSlide && mouseXGrid - 1 === colSliding;
+        drawArrow(x, 0, 'down', mouseXGrid === x && mouseYGrid === 0, illuminated);
+        drawArrow(x, 6, 'up', mouseXGrid === x && mouseYGrid === 6, illuminated);
     }
 
     noStroke();
@@ -909,6 +905,95 @@ function drawArrows() {
     textSize(gridSize / 2);
     text('?', gridSize / 4, gridSize / 4 + 2);
     text('X', gameWidth - gridSize / 4 - 2, gridSize / 4 + 2);  
+}
+
+function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
+    // direction = 'left', 'right', 'up', 'down'
+    let realX = xPosition * gridSize;
+    let realY = yPosition * gridSize;
+
+    //rect(realX, realY, gridSize, gridSize);
+    let halfGridsize = gridSize / 2;
+    let p1;
+    let p2;
+    let p3;
+    if (direction === 'up' || direction === 'down') {
+        if (direction === 'up') {
+
+                p1 = [realX + 2, realY + halfGridsize]; 
+                p2 = [realX + gridSize - 2, realY + halfGridsize]; 
+                p3 = [realX + halfGridsize, realY]; //); 
+        }
+        if (direction === 'down') {
+
+                p1 = [realX + 2, realY + halfGridsize]; 
+                p2 = [realX + gridSize - 2, realY + halfGridsize]; 
+                p3 = [realX + halfGridsize, realY + gridSize]; 
+
+        }
+    } else {
+        if (direction === 'left') {
+
+                p1 = [realX + halfGridsize, realY + 2]; 
+                p2 = [realX + halfGridsize, realY + gridSize - 2]; 
+                p3 = [realX, realY  + halfGridsize];
+        }
+        if (direction === 'right') {
+
+                p1 = [realX + halfGridsize, realY + 2]; 
+                p2 = [realX + halfGridsize, realY + gridSize - 2]; 
+                p3 = [realX + gridSize, realY + halfGridsize];
+
+        }
+    }
+
+    if (selected)
+    {
+        if (extraHighlight)
+        {
+            noStroke();
+            let cx = p1[0] + p2[0] + p3[0];
+            cx /= 3;
+            let cy = p1[1] + p2[1] + p3[1];
+            cy /= 3;
+            for (let i = 2; i > 1; i -= 0.3)
+            {
+                fill(255, 10);
+                circle(cx, cy, i * gridSize / 1.5 + abs((sin(timer / 750) * gridSize / 3)));
+            }
+        }
+        fill(color(highlightedSquareColor));
+        stroke(180, 60);
+        strokeWeight(6);
+        triangle(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+        
+
+        if (extraHighlight) {
+            fill(255, 120 + cos(timer / 2000) * 20);
+            strokeWeight(6 + sin(timer / 1000) * 5);
+            stroke(220, 140);
+            triangle(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+        }
+
+        stroke(0, 60);
+        strokeWeight(2);
+        noFill();
+        triangle(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+    }
+    else
+    {
+        noFill();
+        stroke(50, 40);
+        strokeWeight(6);
+        triangle(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+
+        fill(color(gridColor));
+        stroke(0, 60);
+        strokeWeight(2);
+        triangle(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+    }
+
+
 }
 
 function drawUI() {
