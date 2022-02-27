@@ -27,10 +27,21 @@ TODO:
 - blitz: 5 seconds, 1/s second per points
 - unlimited: no timer, no score
 
+- if you exit to the main screen, save your game, and add a resume option to the very bottom of the menu
+
+- add hemhaw easter egg, if you ever spell it out do something cool
 - add sound effects
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 - add more palettes
 - more particle effects and better scoring juice
+- add a leaderboard and highest word scores
+
+saved game needs:
+- difficulty
+- score
+- timer
+- board
+
 */
 let gridSize;
 let gameWidth;
@@ -129,6 +140,44 @@ const difficulties = {
 // Track highscores across the 4 levels
 let highScores = [0, 0, 0, 0];
 
+let haveSavedGame = false;
+let playingSavedGame = false;
+
+function loadGame() {
+    let savedGame = getItem('savedGame');
+    if (savedGame) {
+        playingSavedGame = true;
+        let [difficulty, _score, _timer, board] = savedGame.split(',');
+        gameDifficulty = parseInt(difficulty);
+        score = parseInt(_score);
+        timer = parseFloat(_timer);
+        letterGridFromString(board);
+    }
+}
+
+function saveGame() {
+    let boardString = letterGridToString();
+    let gameString = gameDifficulty + ',' + score + ',' + timer + ',' + boardString;
+    storeItem('savedGame', gameString);
+}
+
+function eraseSaveGame() {
+    removeItem('savedGame');
+}
+
+function tryLoadSaveGame() {
+    let haveSave = getItem('savedGame');
+    if (haveSave) {
+        loadGame();
+        haveSavedGame = true;
+        playingSavedGame = true;
+    }
+    else
+    {
+        haveSavedGame = false;
+    }
+}
+
 function doMainMenu() {
 
     fill(0, 10);
@@ -136,8 +185,31 @@ function doMainMenu() {
     // main menu is active
     drawTitle();
     drawDifficulties();
+    showResume();
     // handle mouse clicks
     handleMainMenuMouse();
+}
+
+function showResume() 
+{
+    if (!haveSavedGame) return;
+    let x = gameWidth / 2;
+    let y = gameHeight - gridSize + gridSize / 2;
+    let selected;
+    if (mouseY > gridSize * 7) selected = true;
+    if (selected) {
+        fill(255);
+        stroke(180, 150);
+        strokeWeight(3);
+        text('resume', x, y);
+    }
+    fill(textColor);
+    noStroke();
+    text('resume', x, y);
+    if (selected) {
+        fill(255, 160);
+        text('resume', x, y);
+    }
 }
 
 function loadHighscores() {
@@ -156,8 +228,16 @@ function saveHighscores() {
 
 function handleMainMenuMouse() {
     let selected;
+    let resumeSelected;
     if (mouseY > gridSize * 2 && mouseY < gridSize * 7) {
         selected = Math.floor((mouseY - gridSize) / gridSize) - 1;
+    }
+    if (mouseY > gridSize * 7) {
+        resumeSelected = true;
+    } 
+    else 
+    {
+        resumeSelected = false;
     }
     if (!mainMenuNeedUnclick && mouseIsPressed) {
         mainMenuClickTimer += deltaTime;
@@ -167,16 +247,27 @@ function handleMainMenuMouse() {
         mainMenuClickTimer = 0;
     }
     if (mainMenuClickTimer > 200) {
-        if (!(mouseY > gridSize * 2 && mouseY < gridSize * 7))
+        if (!(mouseY > gridSize * 2 && mouseY < gridSize * 8))
         {
             mainMenuClickTimer = 0;
             return;
         }
-        // select the difficulty from our array
-        gameDifficulty = selected;
-        timer = 1000 * 60 * difficulties[gameDifficulty].minutes;
-        gameState = GameStates.Countdown;
-        return;
+        if (resumeSelected)
+        {
+            tryLoadSaveGame();
+            gameState = GameStates.Countdown;
+            return;
+        }
+        else
+        {
+            // select the difficulty from our array
+            playingSavedGame = false;
+            resetGame();
+            gameDifficulty = selected;
+            timer = 1000 * 60 * difficulties[gameDifficulty].minutes;
+            gameState = GameStates.Countdown;
+            return;
+        }
     }
 
 }
@@ -483,6 +574,7 @@ function setup() {
         loadRandomPalette();
     }
     loadHighscores();
+    tryLoadSaveGame();
     printConsoleGreeting();
     introTimer = 0;
     background(0);
@@ -491,13 +583,7 @@ function setup() {
 
 function printConsoleGreeting()
 {
-    console.log(" __   __  _______  __   __  __   __  _______  _     _ ");
-    console.log("|  | |  ||       ||  |_|  ||  | |  ||   _   || | _ | |");
-    console.log("|  |_|  ||    ___||       ||  |_|  ||  |_|  || || || |");
-    console.log("|       ||   |___ |       ||       ||       ||       |");
-    console.log("|       ||    ___||       ||       ||       ||       |");
-    console.log("|   _   ||   |___ | ||_|| ||   _   ||   _   ||   _   |");
-    console.log("|__| |__||_______||_|   |_||__| |__||__| |__||__| |__|");
+    console.log("hemhaw");
     console.log("Tyler Weston, February 2022, https://github.com/tylerweston/hemhaw");
 }
 
@@ -621,19 +707,22 @@ function checkExitGame() {
             }
             else
             {
-                if (score > highScores[gameDifficulty])
-                {
-                    gotNewHighscore = true;
-                    highScores[gameDifficulty] = score;
-                    saveHighscores();
-                }
-                timer = 0;
-                if (mouseIsPressed && mouseButton === LEFT) 
-                {
-                    eatGameoverClickFlag = true;
-                }
-                gameState = GameStates.EndGame;
-                deBroglieTimer = 0;
+                // if (score > highScores[gameDifficulty])
+                // {
+                //     gotNewHighscore = true;
+                //     highScores[gameDifficulty] = score;
+                //     saveHighscores();
+                // }
+                // timer = 0;
+                // if (mouseIsPressed && mouseButton === LEFT) 
+                // {
+                //     eatGameoverClickFlag = true;
+                // }
+                // gameState = GameStates.EndGame;
+                // deBroglieTimer = 0;
+                saveGame();
+                haveSavedGame = true;
+                gameState = GameStates.MainMenu;
             }
         }
     }
@@ -752,6 +841,10 @@ function runTimers() {
             eatGameoverClickFlag = true;
         }
         //isGameOver = true;
+        if (playingSavedGame)
+        {
+            eraseSaveGame();
+        }
         gameState = GameStates.EndGame;
         deBroglieTimer = 0;
     }
@@ -796,17 +889,33 @@ function gameOver()
     let totalTimeString = totalTimeMinutes + ':' + nf(totalTimeSeconds, 2);
     // need to offer choice of either play again or go to main menu
 
-    if (abs(mouseY - gridSize * 2) < gridSize / 2)  
+    if (abs(mouseY - gridSize * 2) < gridSize / 2) 
+    { 
+        strokeWeight(4);
+        stroke(255, 70);
         fill(255)
+    }
     else
+    {
+        strokeWeight(2);
+        stroke(0);
         fill(color(textColor));
+    }
 
     text("play again", gameWidth / 2, gridSize * 2);
 
     if (abs(mouseY - gridSize * 3) < gridSize / 2)
+    {
+        strokeWeight(4);
+        stroke(255, 70);
         fill(255)
+    }
     else
+    {
+        strokeWeight(2);
+        stroke(0);
         fill(color(textColor));
+    }
     text("main menu", gameWidth / 2, gridSize * 3);
     
     textSize(gridSize / 2);
@@ -826,6 +935,7 @@ function gameOver()
             if (abs(mouseY - gridSize * 3) < gridSize / 2)
             { 
                 resetGame();
+                tryLoadSaveGame();
                 mainMenuNeedUnclick = true;
                 gameState = GameStates.MainMenu;
             }
@@ -844,6 +954,7 @@ function resetGame()
     score = 0;
     // base timer on difficulty
     timer = 1000 * 60 * difficulties[gameDifficulty].minutes;//1000 * 60 * startingMinutes;
+    
     currentWord = '';
     clickedTrail = [];
     lastClicked = [];

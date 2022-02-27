@@ -69,6 +69,25 @@ function replaceLetters() {
     }
 }
 
+function letterGridToString() {
+    let gridString = '';
+    for (let x = 0; x < 5; x++) {
+        for (let y = 0; y < 5; y++) {
+            gridString += letterArray[x][y];
+        }
+    }
+    return gridString;
+}
+
+function letterGridFromString(string) {
+    for (let x = 0; x < 5; x++) {
+        for (let y = 0; y < 5; y++) {
+            letterArray[x][y] = string[x * 5 + y];
+        }
+    }
+}
+
+
 function getScore(letter) {
     if (letter === '*') return 0;
     let ch = letter.charCodeAt(0);
