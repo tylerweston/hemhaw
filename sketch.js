@@ -230,7 +230,7 @@ function doIntro() {
     gameState = GameStates.MainMenu;
 }
 
-function drawBonusTile(bonusTypeTile, gridX, gridY) {
+function drawBonusTile(bonusTypeTile, gridX, gridY, bonusTime) {
     textAlign(CENTER, CENTER);
     let outlineColor;
     let fillColor;
@@ -260,10 +260,15 @@ function drawBonusTile(bonusTypeTile, gridX, gridY) {
             bonusText = '2W';
             break;
     }
+    let alph = 140;
+    if (bonusTime < 100)
+    {
+        alph = map(bonusTime, 0, 100, 0, 140);
+    }
     let outlineClr = color(outlineColor);
-    outlineClr.setAlpha(140);
+    outlineClr.setAlpha(alph);
     let fillClr = color(fillColor);
-    fillClr.setAlpha(130);
+    fillClr.setAlpha(alph);
     stroke(outlineClr);
     strokeWeight(2);
     fill(color(fillClr));
@@ -356,7 +361,7 @@ function drawBonusTiles() {
         let [bonusType, bonusX, bonusY, bonusTime] = bonusTiles[i];
         if (bonusTime > 0)
         {    
-            drawBonusTile(bonusType, bonusX, bonusY);
+            drawBonusTile(bonusType, bonusX, bonusY, bonusTime);
         }
     }
 }
@@ -969,6 +974,14 @@ function drawLetterArray() {
         }
     }
 
+    // convert mouseX, mouseY to a grid position
+    let xSelected = floor((mouseX - gridSize) / gridSize);
+    let ySelected = floor((mouseY - gridSize) / gridSize);
+    noFill();
+    strokeWeight(8);
+    stroke(210, 90);
+    rect((xSelected + 1) * gridSize, (ySelected + 1) * gridSize, gridSize, gridSize);
+
     drawBonusTiles();
 
     // letter grid outline
@@ -1112,7 +1125,7 @@ function slideLine(row, col, direction) {
 }
 
 function mousePressed() {
-    if (gameState === GameStates.Countdown) return;
+    if (gameState !== GameStates.MainGame) return;
     if (mouseX < gridSize / 2 && mouseY < gridSize / 2) {
         loadRandomPalette();
     }
