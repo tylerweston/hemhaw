@@ -28,11 +28,7 @@ TODO:
 - unlimited: no timer, no score
 
 - add sound effects
-- bonus tile juice, make them pulsate or something like that to look cooler?
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
-- reduce points to a third of a second per point bonus time?
-- clean up arrows, replace the font arrows with nicely drawn ones
-- add an icon to top left so people know about palette change features
 - add more palettes
 - more particle effects and better scoring juice
 */
@@ -518,6 +514,10 @@ function loadRandomPalette() {
     let randomPaletteIndex = floor(random(0, palettes.length));
     let randomPalette = palettes[randomPaletteIndex];
     [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = randomPalette;
+    if (random() < 0.5)
+    {
+        [backgroundColor, gridColor] = [gridColor, backgroundColor];
+    }
     storeItem('palette', randomPaletteIndex);
 }
 
@@ -932,13 +932,13 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
 
                 p1 = [realX + 2, realY + halfGridsize]; 
                 p2 = [realX + gridSize - 2, realY + halfGridsize]; 
-                p3 = [realX + halfGridsize, realY]; //); 
+                p3 = [realX + halfGridsize, realY + 2]; //); 
         }
         if (direction === 'down') {
 
                 p1 = [realX + 2, realY + halfGridsize]; 
                 p2 = [realX + gridSize - 2, realY + halfGridsize]; 
-                p3 = [realX + halfGridsize, realY + gridSize]; 
+                p3 = [realX + halfGridsize, realY + gridSize - 2]; 
 
         }
     } else {
@@ -946,13 +946,13 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
 
                 p1 = [realX + halfGridsize, realY + 2]; 
                 p2 = [realX + halfGridsize, realY + gridSize - 2]; 
-                p3 = [realX, realY  + halfGridsize];
+                p3 = [realX + 2, realY  + halfGridsize];
         }
         if (direction === 'right') {
 
                 p1 = [realX + halfGridsize, realY + 2]; 
                 p2 = [realX + halfGridsize, realY + gridSize - 2]; 
-                p3 = [realX + gridSize, realY + halfGridsize];
+                p3 = [realX + gridSize - 2, realY + halfGridsize];
 
         }
     }
