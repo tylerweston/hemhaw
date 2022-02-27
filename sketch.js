@@ -143,6 +143,41 @@ let highScores = [0, 0, 0, 0];
 let haveSavedGame = false;
 let playingSavedGame = false;
 
+let particles = [];
+
+function spawnParticle(pos, vel, color, size, life) {
+    particles.push({
+        pos: pos,
+        vel: vel,
+        color: color,
+        size: size,
+        life: life
+    });
+}
+
+function runParticles() {
+    if (particles.length === 0) return;
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].pos[0] += particles[i].vel[0];
+        particles[i].pos[1] += particles[i].vel[1];
+        particles[i].life -= deltaTime;
+        if (particles[i].life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+function drawParticles() {
+    for (let i = 0; i < particles.length; i++) {
+        fill(particles[i].color);
+        noStroke();
+        ellipse(particles[i].pos[0], 
+            particles[i].pos[1], 
+            particles[i].size, 
+            particles[i].size);
+    }
+}
+
 function loadGame() {
     let savedGame = getItem('savedGame');
     if (savedGame) {
@@ -556,6 +591,7 @@ function makeBonusTiles() {
 }
 
 function setup() { 
+    frameRate(60);
     gridSize = Math.min(windowWidth / 7, windowHeight / 8) * 0.95;
     gameWidth = int(7 * gridSize);
     gameHeight = int(8 * gridSize);
@@ -661,6 +697,7 @@ function doCountdown() {
 
 function doMainGame() {
     runTimers();
+    runParticles();
     runBonusTiles();
     runAnimatedBonusTiles();
     makeBonusTiles();
@@ -676,11 +713,13 @@ function doMainGame() {
 
     drawHighlights();
     highlightClickTrail();
+    drawHighlightLine();
     drawAnimatedBonusTiles();
     drawCurrentWord();
     drawUI();
     drawScoreSlider();
     drawShading();
+    drawParticles();
     checkExitGame();
 }
 
@@ -692,11 +731,11 @@ function checkExitGame() {
         return;
     }
     if (mouseX > gameWidth - gridSize / 2 && mouseY < gridSize / 2) {
-        fill(0, map(exitToMainMenuTimer, 0, 1000, 0, 180));
+        fill(0, map(exitToMainMenuTimer, 0, 750, 0, 180));
         noStroke();
         rect(0, 0, gameWidth, gameHeight);
         exitToMainMenuTimer += deltaTime;
-        if (exitToMainMenuTimer > 1000) {
+        if (exitToMainMenuTimer > 750) {
             if (gameDifficulty == 4)
             {
                 mainMenuClickTimer = 0;
@@ -1670,23 +1709,140 @@ function highlightClickTrail() {
 
         rect(x * gridSize + 1, y * gridSize + 1, gridSize - 2, gridSize - 2);
     }
+    // // draw the line
+    // let lastLocation = [];
+
+    // strokeWeight(4);
+    // noFill();
+    // for (let i = 0; i < clickedTrail.length; i++) {
+    //     let alph = map(i, 0, clickedTrail.length, 0, 100);
+    //     stroke(255, alph);
+    //     let x = clickedTrail[i][0] + 1;
+    //     let y = clickedTrail[i][1] + 1;
+    //     if (lastLocation.length > 0) {
+    //         line(lastLocation[0] * gridSize + gridSize / 2, 
+    //             lastLocation[1] * gridSize + gridSize / 2, 
+    //             x * gridSize + gridSize / 2, 
+    //             y * gridSize + gridSize / 2);
+    //     }
+    //     lastLocation = [x, y];
+    // }
+}
+
+function drawHighlightLine()
+{
+    if (clickedTrail.length === 0) return;
     // draw the line
     let lastLocation = [];
 
-    strokeWeight(4);
+    strokeWeight(1);
     noFill();
     for (let i = 0; i < clickedTrail.length; i++) {
-        let alph = map(i, 0, clickedTrail.length, 0, 100);
-        stroke(255, alph);
+        let alph = map(i, 0, clickedTrail.length, 50, 175);
+        //stroke(255, alph);
         let x = clickedTrail[i][0] + 1;
         let y = clickedTrail[i][1] + 1;
+        noStroke();
+        fill(220, alph / 2);
+        circle(x * gridSize + gridSize / 2 + random(-gridSize / 8, gridSize / 8), 
+            y * gridSize + gridSize / 2 + random(-gridSize / 8, gridSize / 8), 
+            gridSize / 4 * random(0, 1));
+        // if lastLocation.length is 0, that means there is only one location
+        // so skip everything
         if (lastLocation.length > 0) {
-            line(lastLocation[0] * gridSize + gridSize / 2, 
-                lastLocation[1] * gridSize + gridSize / 2, 
-                x * gridSize + gridSize / 2, 
-                y * gridSize + gridSize / 2);
+
+            // line(lastLocation[0] * gridSize + gridSize / 2, 
+            //     lastLocation[1] * gridSize + gridSize / 2, 
+            //     x * gridSize + gridSize / 2, 
+            //     y * gridSize + gridSize / 2);
+            for (let j = 0; j < floor(random(2, 5)); j++) 
+            {
+                stroke(random(170, 250), alph + random(-15, 25));
+                strokeWeight(floor(random(1, 3)));
+                let xStart = lastLocation[0] * gridSize + gridSize / 2;
+                let yStart = lastLocation[1] * gridSize + gridSize / 2;
+                xStart += random(-gridSize / 8, gridSize / 8);
+                yStart += random(-gridSize / 8, gridSize / 8);
+                let xEnd = x * gridSize + gridSize / 2;
+                let yEnd = y * gridSize + gridSize / 2;
+                xEnd += random(-gridSize / 8, gridSize / 8);
+                yEnd += random(-gridSize / 8, gridSize / 8);
+                let xMid = xStart + (xEnd - xStart) / 2;
+                let yMid = yStart + (yEnd - yStart) / 2;
+                xMid += random(-1, 1) * gridSize / 8;
+                yMid += random(-1, 1) * gridSize / 8;
+                // line(lastLocation[0] * gridSize + gridSize / 2 + random() * 10 - 5,
+                //     lastLocation[1] * gridSize + gridSize / 2 + random() * 10 - 5,
+                //     x * gridSize + gridSize / 2 + random() * 10 - 5,
+                //     y * gridSize + gridSize / 2 + random() * 10 - 5);
+                line(xStart, yStart, xMid, yMid);
+                line(xMid, yMid, xEnd, yEnd);
+            }
+            // draw some fragments
+            for (let j = 0; j < floor(random(3, 7)); j++) 
+            {
+                stroke(random(170, 250), alph + random(-15, 25));
+                let xStart = lastLocation[0] * gridSize + gridSize / 2 + random() * 20 - 10;
+                let yStart = lastLocation[1] * gridSize + gridSize / 2 + random() * 20 - 10;
+
+                let xEnd = x * gridSize + gridSize / 2 + random() * 20 - 10;
+                let yEnd = y * gridSize + gridSize / 2 + random() * 20 - 10;
+
+                let lineStart = random(0.5);
+                let lineEnd = random(lineStart, 1);
+
+                // figure out the point that is lineStarts of the line
+                let xStart2 = xStart + (xEnd - xStart) * lineStart;
+                let yStart2 = yStart + (yEnd - yStart) * lineStart;
+                // figure out the point that is lineEnds of the line
+                let xEnd2 = xStart + (xEnd - xStart) * lineEnd;
+                let yEnd2 = yStart + (yEnd - yStart) * lineEnd;
+                line(xStart2, yStart2, xEnd2, yEnd2);
+
+            }
+            // for (let i = 0; i < floor(random(2, 5)); i++)
+            // {
+            //     let xStart = lastLocation[0] * gridSize + gridSize / 2 + random() * 40 - 20;
+            //     let yStart = lastLocation[1] * gridSize + gridSize / 2 + random() * 40 - 20;
+            //     let xEnd = x * gridSize + gridSize / 2 + random() * 60 - 30;
+            //     let yEnd = y * gridSize + gridSize / 2 + random() * 60 - 30;
+            //     let pos = [xStart, yStart];
+            //     let vel = [(xEnd - xStart) / 10, (yEnd - yStart) / 10];
+            //     let life = random(150, 250);
+            //     let size = random(1, 5);
+            //     let color = [random(150, 250), random(50, 250)];
+            //     spawnParticle(pos, vel, color, size, life);
+            // }
         }
         lastLocation = [x, y];
+    }
+    for (let j = 0; j < floor(random(6, 9)); j++) 
+    {
+        // pick two numbers that are in our clickedTrail
+        let num1 = floor(random(0, clickedTrail.length));
+        let num2 = floor(random(0, clickedTrail.length));
+        let x1 = clickedTrail[num1][0] + 1;
+        let y1 = clickedTrail[num1][1] + 1;
+        let x2 = clickedTrail[num2][0] + 1;
+        let y2 = clickedTrail[num2][1] + 1;
+        let xStart = x1 * gridSize + gridSize / 2 + random(gridSize) - gridSize / 2;
+        let yStart = y1 * gridSize + gridSize / 2 + random(gridSize) - gridSize / 2;
+        let xEnd = x2 * gridSize + gridSize / 2 + random(gridSize) - gridSize / 2;
+        let yEnd = y2 * gridSize + gridSize / 2 + random(gridSize) - gridSize / 2;
+        let pos = [xStart, yStart];
+        let vel = [max((xEnd - xStart) / 10, random(1)), 
+            max((yEnd - yStart) / 10, random(1))];
+        let life = random(150, 250);
+        let size = random(1, 5);
+        if (random() < 0.01)
+        {
+            size *= random(2, 4);
+            vel[0] *= 0.5;
+            vel[1] *= 0.5;
+        }
+        let clr = color(correctColor);
+        clr.setAlpha(random(60, 180));
+        spawnParticle(pos, vel, clr, size, life);
     }
 }
 
