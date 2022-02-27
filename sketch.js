@@ -493,14 +493,23 @@ function doCountdown() {
         return;
     } 
     mainCountdown -= deltaTime;
-    textSize(gridSize * 3);
-    textAlign(CENTER, CENTER);
-    fill(textColor);
-    stroke(0);
+
+
+
     let secs_left = floor(mainCountdown / 1000) + 1;
     if (secs_left > 0)
     {
-        text(floor(mainCountdown / 1000) + 1, gameWidth / 2, gameHeight / 2);  
+        let t = floor(mainCountdown / 1000) + 1;
+        textSize(gridSize * 3);
+        textAlign(CENTER, CENTER);
+        fill(255, 150);
+        strokeWeight(8);
+        stroke(255, 80);
+        text(t, gameWidth / 2, gameHeight / 2);
+        fill(textColor);
+        stroke(0);
+        strokeWeight(2);
+        text(t, gameWidth / 2, gameHeight / 2);  
     }
 }
 
@@ -750,6 +759,10 @@ function gameOver()
         }
         fill(255, 50);
         rect(0, 0, gameWidth, gameHeight);
+    }
+    if (!mouseIsPressed) {
+        gameOverMouseCount = 0;
+        // eatGameoverClickFlag = false;
     }
 }
 
@@ -1096,17 +1109,6 @@ function slideLine(row, col, direction) {
 
 function mousePressed() {
     if (gameState === GameStates.Countdown) return;
-    
-    // if (gameState === GameStates.EndGame) {
-    //     gameOverMouseCount += deltaTime;
-    //     if (gameOverMouseCount > 200) {
-    //         resetGame();
-    //         gameState = GameStates.MainGame;
-    //     }
-    //     fill(0, 10);
-    //     rect(0, 0, gameWidth, gameHeight);
-    // }
-    // TODO: Allow right click to move a line the opposite direction?
     if (mouseX < gridSize / 2 && mouseY < gridSize / 2) {
         loadRandomPalette();
     }
