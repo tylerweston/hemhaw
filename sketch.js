@@ -749,7 +749,7 @@ function gameOver()
     stroke(color(backgroundColor));
     fill(color(textColor));
     strokeWeight(2);
-    text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScores[gameDifficulty], gameWidth / 2, gridSize * 5);
+    text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScores[gameDifficulty]+"\n" + difficulties[gameDifficulty].name, gameWidth / 2, gridSize * 5);
     if (mouseIsPressed && mouseButton === LEFT && !eatGameoverClickFlag) {
         gameOverMouseCount += deltaTime;
         if (gameOverMouseCount > 200) {
