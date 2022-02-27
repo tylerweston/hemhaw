@@ -71,13 +71,12 @@ let highlightedSquareColor;
 let textColor;
 let gridColor;
 
-//const startingMinutes = 1;
 let score = 0;
 let highScore = 0;
 let storedHighscore = 0;
 let gotNewHighscore = false;
 let shownNewHighscore = false;
-let timer; // = 1000 * 60 * startingMinutes;  //msec * sec * min
+let timer;
 let totalTimePlayed = 0;
 
 let isGameOver = false;
@@ -98,14 +97,14 @@ let deBroglieTimer = 0;
 
 const letterBonusPercentage = 0.1;
 const wordBonusPercentage = 0.05;
-// const letterBonusPercentage = 1;
-// const wordBonusPercentage = 1;
+
 let bonusTiles = [];
 let animatedBonusTiles = [];
 
 let mainMenuNeedUnclick = false;
 let mainMenuClickTimer = 0;
 let mainMenuSelected = 0;
+
 class BonusTileType {
     static TripleLetter = new BonusTileType('Triple Letter');
     static DoubleLetter = new BonusTileType('Double Letter');
@@ -133,6 +132,8 @@ const difficulties = {
     4: {name: 'unlimited', minutes: -1, secondPerScore: 0}
 }
 
+let highScores = [0, 0, 0, 0];
+
 function doMainMenu() {
     background(0);
     // main menu is active
@@ -140,6 +141,20 @@ function doMainMenu() {
     drawDifficulties();
     // handle mouse clicks
     handleMainMenuMouse();
+}
+
+function loadHighscores() {
+    let highscoreString = getItem('highscores');
+    if (!highscoreString) {
+        storeItem('highscores', '0,0,0,0');
+        highscoreString = '0,0,0,0';
+    }
+    highScores = highscoreString.split(',').map(x => int(x));
+}
+
+function saveHighscores() {
+    let highscoreString = highScores.join(',');
+    storeItem('highscores', highscoreString);
 }
 
 function handleMainMenuMouse() {
@@ -420,17 +435,7 @@ function setup() {
     {
         loadRandomPalette();
     }
-    // storeItem('highScore', null);
-    let tryHighScore = getItem('highScore');
-    if (tryHighScore !== null) 
-    {
-        highScore = tryHighScore;
-        storedHighscore = tryHighScore;
-    } 
-    else
-    {
-        storeItem('highScore', 0);
-    }
+    loadHighscores();
     printConsoleGreeting();
     gameState = GameStates.Intro;
 } 
@@ -537,20 +542,17 @@ function checkExitGame() {
             }
             else
             {
-                // goto end screen including checking score
-                if (score > storedHighscore)
+                if (score > highScores[gameDifficulty])
                 {
                     gotNewHighscore = true;
-                    highScore = score;
-                    storeItem('highScore', highScore);
-                    storedHighscore = highScore;
+                    highScores[gameDifficulty] = score;
+                    saveHighscores();
                 }
                 timer = 0;
                 if (mouseIsPressed && mouseButton === LEFT) 
                 {
                     eatGameoverClickFlag = true;
                 }
-                //isGameOver = true;
                 gameState = GameStates.EndGame;
                 deBroglieTimer = 0;
             }
@@ -648,12 +650,11 @@ function runTimers() {
     {
         // this is fired once so we can store high score here
         finalWordCheck();
-        if (score > storedHighscore)
+        if (score > highScores[gameDifficulty])
         {
             gotNewHighscore = true;
-            highScore = score;
-            storeItem('highScore', highScore);
-            storedHighscore = highScore;
+            highScores[gameDifficulty] = score;
+            saveHighscores();
         }
         timer = 0;
         if (mouseIsPressed && mouseButton === LEFT) 
@@ -705,8 +706,6 @@ function gameOver()
     let totalTimeString = totalTimeMinutes + ':' + nf(totalTimeSeconds, 2);
     // need to offer choice of either play again or go to main menu
 
-    //text('click to\nplay again\n\ntotal time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gameHeight / 2);
-    //let selected = floor(mouseY / gridSize);
     if (abs(mouseY - gridSize * 2) < gridSize / 2)  
         fill(255)
     else
@@ -724,7 +723,7 @@ function gameOver()
     stroke(color(backgroundColor));
     fill(color(textColor));
     strokeWeight(2);
-    text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScore, gameWidth / 2, gridSize * 5);
+    text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScores[gameDifficulty], gameWidth / 2, gridSize * 5);
     if (mouseIsPressed && mouseButton === LEFT) {
         gameOverMouseCount += deltaTime;
         if (gameOverMouseCount > 200) {
@@ -1223,10 +1222,19 @@ function mouseReleased() {
     // {
     //     eatGameoverClickFlag = false;
     // }
-    if (mainMenuNeedUnclick)
-        mainMenuNeedUnclick = false;
+    if (gameState === GameStates.EndGame) {
+        if (eatGameoverClickFlag)
+            eatGameoverClickFlag = false;
+    }
+    if (gameState === GameStates.MainMenu)
+    {
+        if (mainMenuNeedUnclick)
+            mainMenuNeedUnclick = false;
+    }
     if (gameState === GameStates.MainGame)
+    {
         doWordCheck();
+    }
 }
 
 function scoreWordWithBonus(word) {
@@ -1301,16 +1309,10 @@ function doWordCheck() {
         scoreJustAdded = scoreWordWithBonus(currentWord);
         scrollTimer = 0;
         score += scoreJustAdded;
-        //timer += (scoreJustAdded * 500);    // half second per point
         timer += scoreJustAdded * 1000 * difficulties[gameDifficulty].secondPerScore;
-        if (score > highScore)
-        {
-            highScore = score;
-        }
         removeLetters(clickedTrail);
         dropBonuses(clickedTrail);
         replaceLetters();
-        // dropLetters();
         savedWord = isWord;
     } else {
         highlightColor = '#EE0000';
@@ -1333,9 +1335,10 @@ function finalWordCheck()
     if (!isWord) return;
     let newScore = scoreWordWithBonus(currentWord);
     score += newScore;
-    if (score > highScore)
+    if (score >= highScores[gameDifficulty])
     {
-        highScore = score;
+        gotNewHighscore = true;
+        highScores[gameDifficulty] = score;
     }
     currentWord = '';
     clickedTrail = [];
