@@ -21,17 +21,9 @@ TODO:
         - Scoring
         - Trail
         - Effects
-- Game States:
-    - Intro
-    - Main Menu
-        - Present difficulty levels
-    - Main Game Countdown
-    - Main Game
-    - End Game Screen
-        - High Score Juice
-        - Retry
-        - Main Menu
-
+- why is sometimes a square selected when you start a game?
+- also, sometimes a row or column scrolls when it isn't supposed to
+  at the start of the game.
 - allow user to unselect trail by backing over already selected blocks?
 - add difficulties, 
 - easy: two minute start, 1 second per point
@@ -152,8 +144,8 @@ function doMainMenu() {
 
 function handleMainMenuMouse() {
     let selected;
-    if (mouseY > gridSize && mouseY < gridSize * 6) {
-        selected = Math.floor((mouseY - gridSize) / gridSize);
+    if (mouseY > gridSize * 2 && mouseY < gridSize * 7) {
+        selected = Math.floor((mouseY - gridSize) / gridSize) - 1;
     }
     if (!mainMenuNeedUnclick && mouseIsPressed) {
         mainMenuClickTimer += deltaTime;
@@ -176,13 +168,13 @@ function drawDifficulties() {
     textAlign(CENTER, CENTER);
     textSize(gridSize);
     let selected;
-    if (mouseY > gridSize && mouseY < gridSize * 6) {
-        selected = Math.floor((mouseY - gridSize) / gridSize);
+    if (mouseY > gridSize * 2 && mouseY < gridSize * 7) {
+        selected = Math.floor((mouseY - gridSize) / gridSize) - 1;
     }
     for (let i = 0; i < 5; i++) {
         let difficulty = difficulties[i];
         let x = gameWidth / 2;
-        let y = (i + 1) * gridSize + gridSize / 2;
+        let y = (i + 2) * gridSize + gridSize / 2;
         if (i === selected) {
             fill(255);
             stroke(180, 150);
@@ -204,7 +196,7 @@ function drawTitle() {
     textSize(gridSize);
     fill(textColor);
     noStroke();
-    text('hemhaw', gameWidth / 2, gridSize / 2);
+    text('hemhaw', gameWidth / 2, gridSize / 2 + gridSize);
 }
 
 function doIntro() {
@@ -535,11 +527,33 @@ function checkExitGame() {
         rect(0, 0, gameWidth, gameHeight);
         exitToMainMenuTimer += deltaTime;
         if (exitToMainMenuTimer > 1000) {
-            mainMenuClickTimer = 0;
-            mainMenuNeedUnclick = true;
-            exitToMainMenuTimer = 0;
-            resetGame();
-            gameState = GameStates.MainMenu;
+            if (gameDifficulty == 4)
+            {
+                mainMenuClickTimer = 0;
+                mainMenuNeedUnclick = true;
+                exitToMainMenuTimer = 0;
+                resetGame();
+                gameState = GameStates.MainMenu;
+            }
+            else
+            {
+                // goto end screen including checking score
+                if (score > storedHighscore)
+                {
+                    gotNewHighscore = true;
+                    highScore = score;
+                    storeItem('highScore', highScore);
+                    storedHighscore = highScore;
+                }
+                timer = 0;
+                if (mouseIsPressed && mouseButton === LEFT) 
+                {
+                    eatGameoverClickFlag = true;
+                }
+                //isGameOver = true;
+                gameState = GameStates.EndGame;
+                deBroglieTimer = 0;
+            }
         }
     }
     else
@@ -685,7 +699,7 @@ function gameOver()
     stroke(color(backgroundColor));
     fill(color(textColor));
     strokeWeight(2);
-    let totalTimeSecondsRaw = floor(totalTimePlayed / 1000);
+    let totalTimeSecondsRaw = floor(totalTimePlayed / 1000) - 1;
     let totalTimeMinutes = floor(totalTimeSecondsRaw / 60);
     let totalTimeSeconds = floor(totalTimeSecondsRaw % 60);
     let totalTimeString = totalTimeMinutes + ':' + nf(totalTimeSeconds, 2);
@@ -718,7 +732,7 @@ function gameOver()
             if (abs(mouseY - gridSize * 2) < gridSize / 2)
             { 
                 resetGame();
-                gameState = GameStates.MainGame;
+                gameState = GameStates.Countdown;
             }
             if (abs(mouseY - gridSize * 3) < gridSize / 2)
             { 
@@ -816,6 +830,13 @@ function drawArrows() {
         }
         text('^', gridSize * x + gridSize / 2, gridSize * 6 + gridSize / 2);
     }
+
+    noStroke();
+    fill(0, 50);
+    textAlign(CENTER, CENTER);
+    textSize(gridSize / 2);
+    text('?', gridSize / 4, gridSize / 4 + 2);
+    text('X', gameWidth - gridSize / 4 - 2, gridSize / 4 + 2);  
 }
 
 function drawUI() {
