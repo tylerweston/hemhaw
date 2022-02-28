@@ -310,6 +310,8 @@ function handleMainMenuMouse() {
         if (resumeSelected)
         {
             tryLoadSaveGame();
+            highlightLine.clear();
+            highlightLine.removeAllPoints();
             gameState = GameStates.Countdown;
             return;
         }
