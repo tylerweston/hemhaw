@@ -27,14 +27,14 @@ TODO:
 - blitz: 5 seconds, 1/s second per points
 - unlimited: no timer, no score
 
-- if you exit to the main screen, save your game, and add a resume option to the very bottom of the menu
-
+- lock a row and column and can only be unlocked if used in a word
 - add hemhaw easter egg, if you ever spell it out do something cool
 - add sound effects
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 - add more palettes
 - more particle effects and better scoring juice
 - add a leaderboard and highest word scores
+- a bit of jankiness with holding down arrow buttons to shift
 
 saved game needs:
 - difficulty
@@ -144,6 +144,7 @@ let haveSavedGame = false;
 let playingSavedGame = false;
 
 let particles = [];
+let smoothClock = 0;
 
 function spawnParticle(pos, vel, color, size, life) {
     particles.push({
@@ -169,6 +170,8 @@ function runParticles() {
 
 function drawParticles() {
     for (let i = 0; i < particles.length; i++) {
+        let c = particles[i].color;
+        // c.setAlpha(particles[i].life / 3);;
         fill(particles[i].color);
         noStroke();
         ellipse(particles[i].pos[0], 
@@ -353,6 +356,10 @@ function doIntro() {
     // console.log("Doing intro!");
     introTimer += deltaTime;
     drawTitle();
+    // // get position within screen space
+    // let x = random(gameWidth + 50) - 25;
+    // let y = random(gameHeight + 50) - 25;
+    // text("hemhaw", x, y);
     if (introTimer > introLength) {
         gameState = GameStates.MainMenu;
     }
@@ -828,25 +835,26 @@ function checkStillClickedArrow()
 {
     let xClicked = originalArrowX;
     let yClicked = originalArrowY;
-    return  isMouseCloseToCenterOfSquare(xClicked, yClicked) && mouseIsPressed;
-    //return mouseIsPressed;
+    return  isMouseWithinSquare(xClicked, yClicked) && mouseIsPressed;
+}
+
+function isMouseWithinSquare(x, y) {
+    let gridX = floor(mouseX / gridSize);
+    let gridY = floor(mouseY / gridSize);
+    return gridX === x && gridY === y;
 }
 
 function runTimers() {
+    // TODO: Refactor these clocks, they can be classes
+    // smoothClock will run in all game modes, run up, and
+    // reset at very large intervals. This can be used to run
+    // any animation timers.
+    smoothClock += deltaTime;
     if (gameState === GameStates.MainGame) {
         totalTimePlayed += deltaTime;
     }
     if (gameDifficulty !== 4)   // don't countdown in unlimited mode
         timer -= deltaTime;
-    else
-    {
-        // still need an animation timer
-        timer += deltaTime;
-        if (timer >= 1000)
-        {
-            timer = 0;
-        }
-    }
     if (doingSlide) {
         slidingTimer += deltaTime;
         if (slidingTimer >= slidingMaxTime) {
@@ -1014,6 +1022,7 @@ function resetGame()
     mainMenuClickTimer = 0;
     gameOverMouseCount = 0;
     exitToMainMenuTimer = 0;
+    smoothClock = 0;
     makeLetterArray();
 }
 
@@ -1046,18 +1055,18 @@ function drawArrows() {
     textSize(arrowSize);
     stroke(color(gridColor));
     // get mouse square here and use that to figure out which arrow to illuminate
-    // instead of all these calls to isMouseCloseTpCenterOfSquare!
+    // instead of all these calls to isMouseCloseToCenterOfSquare!
     let mouseXGrid = floor(mouseX / gridSize);
     let mouseYGrid = floor(mouseY / gridSize);
     for (let y = 1; y <= 5; y++) {
         let illuminated = mouseIsPressed && doingSlide && mouseYGrid - 1 === rowSliding;
-        drawArrow(0, y, 'right', mouseXGrid === 0 && mouseYGrid === y, illuminated);
-        drawArrow(6, y, 'left', mouseXGrid === 6 && mouseYGrid === y, illuminated);
+        drawArrow(0, y, 'left', mouseXGrid === 0 && mouseYGrid === y, illuminated);
+        drawArrow(6, y, 'right', mouseXGrid === 6 && mouseYGrid === y, illuminated);
     }
     for (let x = 1; x <= 5; x++) {
         let illuminated = mouseIsPressed && doingSlide && mouseXGrid - 1 === colSliding;
-        drawArrow(x, 0, 'down', mouseXGrid === x && mouseYGrid === 0, illuminated);
-        drawArrow(x, 6, 'up', mouseXGrid === x && mouseYGrid === 6, illuminated);
+        drawArrow(x, 0, 'up', mouseXGrid === x && mouseYGrid === 0, illuminated);
+        drawArrow(x, 6, 'down', mouseXGrid === x && mouseYGrid === 6, illuminated);
     }
 
     noStroke();
@@ -1077,32 +1086,33 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
     let p1;
     let p2;
     let p3;
+    let arrowOffset = gridSize / 16;
     if (direction === 'up' || direction === 'down') {
         if (direction === 'up') {
 
-                p1 = [realX + 2, realY + halfGridsize]; 
-                p2 = [realX + gridSize - 2, realY + halfGridsize]; 
-                p3 = [realX + halfGridsize, realY + 2]; //); 
+                p1 = [realX, realY + gridSize - arrowOffset]; 
+                p2 = [realX + gridSize, realY + gridSize - arrowOffset]; 
+                p3 = [realX + halfGridsize, realY + halfGridsize]; //); 
         }
         if (direction === 'down') {
 
-                p1 = [realX + 2, realY + halfGridsize]; 
-                p2 = [realX + gridSize - 2, realY + halfGridsize]; 
-                p3 = [realX + halfGridsize, realY + gridSize - 2]; 
+                p1 = [realX, realY + arrowOffset]; 
+                p2 = [realX + gridSize, realY + arrowOffset]; 
+                p3 = [realX + halfGridsize, realY + halfGridsize]; 
 
         }
     } else {
         if (direction === 'left') {
 
-                p1 = [realX + halfGridsize, realY + 2]; 
-                p2 = [realX + halfGridsize, realY + gridSize - 2]; 
-                p3 = [realX + 2, realY  + halfGridsize];
+                p1 = [realX + gridSize - arrowOffset, realY]; 
+                p2 = [realX + gridSize - arrowOffset, realY + gridSize]; 
+                p3 = [realX + halfGridsize, realY  + halfGridsize];
         }
         if (direction === 'right') {
 
-                p1 = [realX + halfGridsize, realY + 2]; 
-                p2 = [realX + halfGridsize, realY + gridSize - 2]; 
-                p3 = [realX + gridSize - 2, realY + halfGridsize];
+                p1 = [realX + arrowOffset, realY]; 
+                p2 = [realX + arrowOffset, realY + gridSize]; 
+                p3 = [realX + halfGridsize, realY + halfGridsize];
 
         }
     }
@@ -1119,7 +1129,10 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
             for (let i = 2; i > 1; i -= 0.3)
             {
                 fill(255, 10);
-                circle(cx, cy, i * gridSize / 1.5 + abs((sin(timer / 750) * gridSize / 3)));
+
+                circle(cx, 
+                    cy, 
+                    i * gridSize / 1.5 + abs((sin(smoothClock / 750) * (gridSize / 3))));
             }
         }
         fill(color(highlightedSquareColor));
@@ -1129,8 +1142,8 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
         
 
         if (extraHighlight) {
-            fill(255, 120 + cos(timer / 2000) * 20);
-            strokeWeight(6 + sin(timer / 1000) * 5);
+            fill(255, 120 + cos(smoothClock / 2000) * 20);
+            strokeWeight(6 + sin(smoothClock / 1000) * 5);
             stroke(220, 140);
             triangle(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
         }
@@ -1431,45 +1444,39 @@ function mousePressed() {
     if (x === 0 && y > 0 && y < 6) 
     {
         rowSliding = gridY;
-        slidingDirection = 1;
+        slidingDirection = -1;
         doingSlide = true;
     }
     if (x === 6 && y > 0 && y < 6) 
     {
         rowSliding = gridY;
-        slidingDirection = -1;
+        slidingDirection = 1;
         doingSlide = true;
 
     }
     if (y === 0 && x > 0 && x < 6) 
     {
         colSliding = gridX;
-        slidingDirection = 1;
+        slidingDirection = -1;
         doingSlide = true;
 
     }
     if (y === 6 && x > 0 && x < 6) 
     {
         colSliding = gridX;
-        slidingDirection = -1;
+        slidingDirection = 1;
         doingSlide = true;
     }
-    
+    // we are in main game and we just pressed somewhere
+    // on the board
+    if (x >= 1 && x <= 5 && y >= 1 && y <= 5)
+    {
+        checkForSquareSelect();
+    }
 }
 
-function mouseDragged() {
-    if (gameState !== GameStates.MainGame) return;
-    if (mouseX < gridSize || 
-        mouseY < gridSize || 
-        mouseX > gameWidth - gridSize || 
-        mouseY > gameHeight - gridSize) 
-    {
-        // stop the current drag without scoring
-        currentWord = '';
-        clickedTrail = [];
-        lastClicked = [];
-        return;
-    };
+function checkForSquareSelect()
+{
     [gridX, gridY] = getClosestSquare();
     // check if our last gridPos was the last entry in our clickedTrail and our current grid pos is the 
     // second last entry
@@ -1509,6 +1516,23 @@ function mouseDragged() {
         clickedTrail.push([gridX, gridY]);
     }
     lastGridPos = [gridX, gridY];
+
+}
+
+function mouseDragged() {
+    if (gameState !== GameStates.MainGame) return;
+    if (mouseX < gridSize || 
+        mouseY < gridSize || 
+        mouseX > gameWidth - gridSize || 
+        mouseY > gameHeight - gridSize) 
+    {
+        // stop the current drag without scoring
+        currentWord = '';
+        clickedTrail = [];
+        lastClicked = [];
+        return;
+    };
+    checkForSquareSelect();
     return false;
 }
 
@@ -1731,22 +1755,25 @@ function highlightClickTrail() {
 
 function drawHighlightLine()
 {
+    // TODO: We need to rewrite this entire highlight line
+    // it should be faster, more wiggly, and the particles
+    // need to be done smarter
     if (clickedTrail.length === 0) return;
     // draw the line
     let lastLocation = [];
 
-    strokeWeight(1);
+    // strokeWeight(1);
     noFill();
     for (let i = 0; i < clickedTrail.length; i++) {
-        let alph = map(i, 0, clickedTrail.length, 50, 175);
-        //stroke(255, alph);
+        let alph = map(i, 0, clickedTrail.length, 75, 200);
+        // //stroke(255, alph);
         let x = clickedTrail[i][0] + 1;
         let y = clickedTrail[i][1] + 1;
-        noStroke();
-        fill(220, alph / 2);
-        circle(x * gridSize + gridSize / 2 + random(-gridSize / 8, gridSize / 8), 
-            y * gridSize + gridSize / 2 + random(-gridSize / 8, gridSize / 8), 
-            gridSize / 4 * random(0, 1));
+        // noStroke();
+        // fill(220, alph / 2);
+        // circle(x * gridSize + gridSize / 2 + random(-gridSize / 8, gridSize / 8), 
+        //     y * gridSize + gridSize / 2 + random(-gridSize / 8, gridSize / 8), 
+        //     gridSize / 4 * random(0, 1));
         // if lastLocation.length is 0, that means there is only one location
         // so skip everything
         if (lastLocation.length > 0) {
@@ -1779,7 +1806,7 @@ function drawHighlightLine()
                 line(xMid, yMid, xEnd, yEnd);
             }
             // draw some fragments
-            for (let j = 0; j < floor(random(3, 7)); j++) 
+            for (let j = 0; j < floor(random(2, 5)); j++) 
             {
                 stroke(random(170, 250), alph + random(-15, 25));
                 let xStart = lastLocation[0] * gridSize + gridSize / 2 + random() * 20 - 10;
@@ -1816,24 +1843,25 @@ function drawHighlightLine()
         }
         lastLocation = [x, y];
     }
-    for (let j = 0; j < floor(random(6, 9)); j++) 
+    for (let j = 0; j < floor(random(clickedTrail.length) * 10); j++) 
     {
         // pick two numbers that are in our clickedTrail
-        let num1 = floor(random(0, clickedTrail.length));
-        let num2 = floor(random(0, clickedTrail.length));
+        let num1 = floor(random(0, clickedTrail.length / 2));
+        let num2 = floor(random(num1, clickedTrail.length));
         let x1 = clickedTrail[num1][0] + 1;
         let y1 = clickedTrail[num1][1] + 1;
         let x2 = clickedTrail[num2][0] + 1;
         let y2 = clickedTrail[num2][1] + 1;
-        let xStart = x1 * gridSize + gridSize / 2 + random(gridSize) - gridSize / 2;
-        let yStart = y1 * gridSize + gridSize / 2 + random(gridSize) - gridSize / 2;
-        let xEnd = x2 * gridSize + gridSize / 2 + random(gridSize) - gridSize / 2;
-        let yEnd = y2 * gridSize + gridSize / 2 + random(gridSize) - gridSize / 2;
+        let xStart = x1 * gridSize + gridSize / 2 + random(gridSize / 2) - gridSize / 4;
+        let yStart = y1 * gridSize + gridSize / 2 + random(gridSize / 2) - gridSize / 4;
+        let xEnd = x2 * gridSize + gridSize / 2 + random(gridSize / 2) - gridSize / 4;
+        let yEnd = y2 * gridSize + gridSize / 2 + random(gridSize / 2) - gridSize / 4;
         let pos = [xStart, yStart];
-        let vel = [max((xEnd - xStart) / 10, random(1)), 
-            max((yEnd - yStart) / 10, random(1))];
-        let life = random(150, 250);
-        let size = random(1, 5);
+        // let vel = [max((xEnd - xStart) / 10, random(1)), 
+        //     max((yEnd - yStart) / 10, random(1))];
+        let vel = [(xEnd - xStart) / (gridSize), (yEnd - yStart) / (gridSize)];
+        let life = random(350, 550);
+        let size = random(1, 3);
         if (random() < 0.01)
         {
             size *= random(2, 4);
@@ -1841,7 +1869,7 @@ function drawHighlightLine()
             vel[1] *= 0.5;
         }
         let clr = color(correctColor);
-        clr.setAlpha(random(60, 180));
+        // clr.setAlpha(random(60, 180));
         spawnParticle(pos, vel, clr, size, life);
     }
 }
