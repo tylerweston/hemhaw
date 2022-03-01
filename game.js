@@ -87,7 +87,6 @@ function letterGridFromString(string) {
     }
 }
 
-
 function getScore(letter) {
     if (letter === '*') return 0;
     let ch = letter.charCodeAt(0);

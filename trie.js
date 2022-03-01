@@ -48,6 +48,17 @@ class Trie {
         }
         return false;
     }
+
+    getRandomWord(length) 
+    {
+        // create a string of length *s
+        let word = '';
+        for (let i = 0; i < length; i++) {
+            word += '*';
+        }
+        return this.search(word)
+
+    }
 }
 
 // Durstenfeld shuffle

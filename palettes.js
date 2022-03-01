@@ -1,4 +1,3 @@
-// don't use 0 for first color or you won't see anything
 const palettes = [
     ["#fac8cd","#d7bcc8","#98b6b1","#629677","#495d63"],
     ["#4381c1","#bdadea","#bea2c2","#a37871","#4e4b5c"],
