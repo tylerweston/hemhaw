@@ -30,7 +30,7 @@ function emptyUser()
 
 function tryLoadUser() 
 {
-    if (getItem('user' === null))
+    if (getItem('user') === null)
     {
         // create a new user
         let newUser = {

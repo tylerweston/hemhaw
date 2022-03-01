@@ -892,7 +892,7 @@ function drawUI() {
     text(txt, gameWidth / 2, gameHeight - gridSize / 8 + 2);
 
 
-    if (user.name !== '') 
+    if (user && user.name !== '') 
     {
         // TODO: Check if user name is too long
         textSize(gridSize / 2);
@@ -1514,15 +1514,11 @@ class HighlightThread {
             this.lines.push(line);
             // sometimes spawn a particle here
             if (random() < 0.1) {
-                // console.log("spawning particle");
-                //let pos = [(x1 + x2) / 2, (y1 + y2) / 2];
-                //let pos = [random(x1, x2), random(y1, y2)];
                 let dist = random();
                 let pos = [(1 - dist) * x1 + dist * x2, (1 - dist) * y1 + dist * y2];
                 let vel = [random(-gq, gq), random(-gq, gq)];
                 let life = random(150, 350);
                 let size = random(1, 15);
-                // console.log(`pos: ${pos} vel: ${vel} life: ${life} size: ${size}`);
                 spawnParticle(pos, vel, clr, size, life);
             }
         }
