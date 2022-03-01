@@ -45,6 +45,8 @@ TODO:
 - add a leaderboard and highest word scores
 - a bit of jankiness with holding down arrow buttons to shift
 
+- if you move a grid that has lines drawn on it, move the lines with the grid
+
 saved game needs:
 - difficulty
 - score
@@ -162,6 +164,9 @@ let playingSavedGame = false;
 
 let particles = [];
 let smoothClock = 0;
+
+let introLength = 1000;
+let introTimer; // = 0;
 
 function spawnParticle(pos, vel, color, size, life) {
     particles.push({
@@ -364,8 +369,6 @@ function drawTitle() {
     text('hemhaw', gameWidth / 2, gridSize / 2 + gridSize);
 }
 
-let introLength = 1000;
-let introTimer; // = 0;
 function doIntro() {
     // have 6 rows of random letters, make sure we can
     // spell hemyhaw with them, shuffle them up by 
@@ -412,18 +415,39 @@ function drawAnimatedLockedTile(x, y, life, maxLife) {
     let percent = life / maxLife;
     let realX = (x + 1) * gridSize;
     let realY = (y + 1) * gridSize;
-    fill(0, 160 * percent);
-    stroke(0, 180 * percent);
-    strokeWeight(4 * percent);
+    let lockedTileColor = 0;
+
+    strokeWeight(4);
     if (gridColor === '#000000') {
-        fill(255, 160 * percent);
-        stroke(255, 180 * percent);
+        lockedTileColor = 255;
     }
-    let shrink = map(life, 0, maxLife, gridSize / 4, 0);
-    rect(realX + shrink, 
-        realY + shrink, 
-        gridSize - shrink * 2, 
-        gridSize - shrink * 2);
+    else
+    {
+        lockedTileColor = 0;
+    }
+    fill(lockedTileColor, 160 * percent);
+    stroke(lockedTileColor, 180 * percent);
+    let shrink = map(life, 0, maxLife, 0, 1);
+    let xShrink;
+    let yShrink;
+    if (shrink < 0.5) {
+        xShrink = shrink * 2;
+        yShrink = 0;
+    } else {
+        xShrink = 1;
+        yShrink = (shrink - 0.5) * 2;
+    }
+    let xTopLeft = realX + (gridSize / 2) - (gridSize / 2) * xShrink;
+    let yTopLeft = realY + (gridSize / 2) - (gridSize / 2) * yShrink;
+    let width = gridSize - (gridSize * (1 - xShrink));
+    let height = gridSize - (gridSize * (1 - yShrink));
+    rect(xTopLeft, yTopLeft, width, height);
+    
+    noFill();
+    strokeWeight(gridSize / 2);
+    stroke(lockedTileColor, 100 * shrink);
+    circle(realX + gridSize / 2, realY + gridSize / 2, gridSize * 4 * (1 - shrink));
+
 }
 
 function drawLockedTile(x, y) {
@@ -460,14 +484,13 @@ function removeLockedTiles(trail) {
             {
                 lockedTiles.splice(j, 1);
                 // we also create an animated tile here
-                let randomLife = random(200, 400);
+                let randomLife = random(250, 450);
                 let tile = [_x, _y, randomLife, randomLife];
                 animatedLockedTiles.push(tile);
             }
         }
     }
 }
-
 
 function drawBonusTile(bonusTypeTile, gridX, gridY, bonusTime) {
     textAlign(CENTER, CENTER);
@@ -560,21 +583,24 @@ function drawAnimatedBonusTile(bonusTypeTile, gridX, gridY, bonusTime, bonusTarg
             fillColor = '#F0BAAC';
             break;
     }
-    let alphaAmt = map(bonusTime, 0, bonusTarget, 0, 100);
+    let alphaAmt = map(bonusTime, 0, bonusTarget, 0, 80);
+    // console.log(alphaAmt);
     let outlineClr = color(outlineColor);
     outlineClr.setAlpha(alphaAmt);
     let fillClr = color(fillColor);
     fillClr.setAlpha(alphaAmt);
     let shrinkSize = map(bonusTime, 0, bonusTarget, gridSize * 2, 0);
+
     stroke(outlineClr);
     strokeWeight(2);
-    fill(color(fillClr));
+    fill(fillClr);
     let realX = gridX + 1;
     let realY = gridY + 1;
-    rect(realX * gridSize - shrinkSize * 2, 
-        realY * gridSize - shrinkSize * 2, 
-        gridSize + shrinkSize * 4, 
-        gridSize + shrinkSize * 4);
+    rect(realX * gridSize, realY * gridSize, gridSize, gridSize);
+    rect(realX * gridSize - shrinkSize, 
+        realY * gridSize - shrinkSize, 
+        gridSize + shrinkSize * 2, 
+        gridSize + shrinkSize * 2);
 
     // TODO: This DOES NOT WORK since X/Y is NOT in the middle
     // of the screen, we can't just grow the square out symmetrically
@@ -1777,7 +1803,7 @@ function dropBonuses(trail) {
             {
                 bonusTiles.splice(j, 1);
                 // we also create an animated tile here
-                let randomLife = random(350, 500);
+                let randomLife = random(250, 450);
                 let tile = [bonusType, bonusX, bonusY, randomLife, randomLife];
                 animatedBonusTiles.push(tile);
             }
