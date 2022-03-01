@@ -444,8 +444,8 @@ function drawAnimatedLockedTile(x, y, life, maxLife) {
     rect(xTopLeft, yTopLeft, width, height);
     
     noFill();
-    strokeWeight(gridSize / 2);
-    stroke(lockedTileColor, 100 * shrink);
+    strokeWeight(gridSize / 4);
+    stroke(lockedTileColor, 70 * shrink);
     circle(realX + gridSize / 2, realY + gridSize / 2, gridSize * 4 * (1 - shrink));
 
 }
@@ -484,7 +484,7 @@ function removeLockedTiles(trail) {
             {
                 lockedTiles.splice(j, 1);
                 // we also create an animated tile here
-                let randomLife = random(250, 450);
+                let randomLife = random(350, 550);
                 let tile = [_x, _y, randomLife, randomLife];
                 animatedLockedTiles.push(tile);
             }
@@ -562,7 +562,7 @@ function drawAnimatedBonusTiles() {
 
 function drawAnimatedBonusTile(bonusTypeTile, gridX, gridY, bonusTime, bonusTarget) {
     // we draw a square and change the color based on the time left
-    let outlineColor;
+    // let outlineColor;
     let fillColor;
     switch (bonusTypeTile) 
     {
@@ -583,47 +583,15 @@ function drawAnimatedBonusTile(bonusTypeTile, gridX, gridY, bonusTime, bonusTarg
             fillColor = '#F0BAAC';
             break;
     }
-    let alphaAmt = map(bonusTime, 0, bonusTarget, 0, 80);
-    // console.log(alphaAmt);
-    let outlineClr = color(outlineColor);
-    outlineClr.setAlpha(alphaAmt);
+    let alphaAmt = map(bonusTime, bonusTarget, 0, 80, 0);
     let fillClr = color(fillColor);
     fillClr.setAlpha(alphaAmt);
-    let shrinkSize = map(bonusTime, 0, bonusTarget, gridSize * 2, 0);
-
-    stroke(outlineClr);
-    strokeWeight(2);
+    noStroke();
     fill(fillClr);
-    let realX = gridX + 1;
-    let realY = gridY + 1;
-    rect(realX * gridSize, realY * gridSize, gridSize, gridSize);
-    rect(realX * gridSize - shrinkSize, 
-        realY * gridSize - shrinkSize, 
-        gridSize + shrinkSize * 2, 
-        gridSize + shrinkSize * 2);
-
-    // TODO: This DOES NOT WORK since X/Y is NOT in the middle
-    // of the screen, we can't just grow the square out symmetrically
-    // have to figure out a better way to do this!
-
-    // noStroke();
-    // let smallShrink = map(bonusTime, 0, bonusTarget, gridSize, 0);
-    // let widthGrow = 0;
-    // let heightGrow = 0;
-    // if (bonusTime > bonusTarget - 250)
-    // {
-    //     widthGrow = map(bonusTime, bonusTarget - 250, bonusTarget, gameWidth / 2 , 0);
-    //     heightGrow = map(bonusTime, bonusTarget - 250, bonusTarget, gameHeight / 2, 0);
-    // }
-    // rect(gameWidth / 2 - widthGrow, 
-    //     realY * gridSize + smallShrink / 2, 
-    //     widthGrow * 2, 
-    //     gridSize - smallShrink);
-
-    // rect(realX * gridSize + smallShrink / 2, 
-    //     gameHeight / 2 - heightGrow, 
-    //     gridSize - smallShrink, 
-    //     heightGrow * 2);
+    let realX = (gridX + 1) * gridSize;
+    let realY = (gridY + 1) * gridSize;
+    rect(0, realY, width, gridSize);
+    rect(realX, 0, gridSize, height);
 }
 
 function runAnimatedBonusTiles() {
@@ -1803,7 +1771,7 @@ function dropBonuses(trail) {
             {
                 bonusTiles.splice(j, 1);
                 // we also create an animated tile here
-                let randomLife = random(250, 450);
+                let randomLife = random(350, 650);
                 let tile = [bonusType, bonusX, bonusY, randomLife, randomLife];
                 animatedBonusTiles.push(tile);
             }
