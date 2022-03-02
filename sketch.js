@@ -143,7 +143,7 @@ let showingUserInfo = false;
 // let oldRank = 0;
 let newRankTimer = 0;
 let showRankUp = false;
-const maxRankShow = 4000;
+const maxRankShow = 5000;
 
 let highlightLine;
 
