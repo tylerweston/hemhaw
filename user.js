@@ -44,6 +44,7 @@ function loadUser()
 {
     let userItem = getItem('user');
     user = JSON.parse(userItem);
+    user.rank = getRank();
 }
 
 function getRandomUserName()

@@ -140,6 +140,11 @@ let mainMenuClickTimer = 0;
 let mainMenuSelected = 0;
 let showingUserInfo = false;
 
+// let oldRank = 0;
+let newRankTimer = 0;
+let showRankUp = false;
+const maxRankShow = 4000;
+
 let highlightLine;
 
 let lastTime = 0;
@@ -186,10 +191,134 @@ let introTimer; // = 0;
 let newTime = 0;
 let newTimeDisplayTimer = 0;
 
+class HighlightThread {
+    constructor(trail) {
+        this.trail = trail;
+        this.lines = [];
+    }
+
+    indexToReal(index) {
+        return (index + 1) * gridSize + gridSize / 2;
+    }
+
+    update(trail) {
+        // update the list of thread positions
+        this.trail = trail;
+        //this.lines = [];
+        if (trail.length === 0) return;
+        let [oldXoffset, oldYoffset] = [random(-1, 1) * gridSize / 16, 
+            random(-1, 1) * gridSize / 16];
+        let gq = gridSize / 64;
+        for (let index = 0; index < trail.length - 1; index++) {
+            let [x1, y1] = trail[index];
+            let [x2, y2] = trail[index + 1];
+            [x1, y1] = [this.indexToReal(x1) + oldXoffset, 
+                        this.indexToReal(y1) + oldYoffset];
+            [x2, y2] = [this.indexToReal(x2), this.indexToReal(y2)];
+            let xAmt = random(-1, 1) * gridSize / 16;
+            let yAmt = random(-1, 1) * gridSize / 16;
+            x2 += xAmt;
+            y2 += yAmt;
+            oldXoffset = xAmt;
+            oldYoffset = yAmt;
+            let clr = color(correctColor);
+            clr.setAlpha(map(index, 0, trail.length - 1, 50, 80) + random(-10, 10));    
+            let line = [x1, y1, x2, y2, clr, random(1, 2)];
+            this.lines.push(line);
+            // sometimes spawn a particle here
+            if (random() < 0.1) {
+                let dist = random();
+                let pos = [(1 - dist) * x1 + dist * x2, (1 - dist) * y1 + dist * y2];
+                let vel = [random(-gq, gq), random(-gq, gq)];
+                let life = random(150, 350);
+                let size = random(1, 15);
+                spawnParticle(pos, vel, clr, size, life);
+            }
+        }
+        // randomly remove some lines
+        for (let i = this.lines.length - 1; i >= 0; i--) {
+            if (random(0, 1) < 0.3) {
+                this.lines.splice(i, 1);
+            }
+        }
+    }
+
+    clear() {
+        this.lines = [];
+    }
+
+    draw() {
+        for (let i = 0; i < this.lines.length; i++) {
+            let [x1, y1, x2, y2, color, _strokeWeight] = this.lines[i];
+            strokeWeight(_strokeWeight);
+            stroke(color);
+            line(x1, y1, x2, y2);
+        }
+    }
+
+}
+
+class HighlightLine {
+    constructor(trail) {
+        this.trail = trail;
+        this.threads = [];
+        this.numThreads = 5;
+        this.animCounter = 0;
+        this.targetFrames = 60;
+        this.targetTime = 1000 / this.targetFrames;
+        for (let i = 0; i < this.numThreads; i++) {
+            this.threads.push(new HighlightThread(trail));
+        }
+    }
+
+    clear() {
+        this.trail = [];
+    }
+
+    removeAllPoints()
+    {
+        for (let i = 0; i < this.numThreads; i++) 
+        {
+            this.threads[i].clear();
+        }
+    }
+
+    addThread() {
+        // add a thread to our highlight line
+        this.threads.push(new HighlightThread(this.trail));
+    }
+
+    updateThreads() {
+        for (let i = 0; i < this.threads.length; i++) {
+            this.threads[i].update(this.trail);
+        }
+    }
+
+    draw() {
+        for (let i = 0; i < this.threads.length; i++) {
+            this.threads[i].draw();
+        }
+    }
+
+    push(location) {
+        this.trail.push(location);
+        this.updateThreads();
+    }
+
+    pop() {
+        let val = this.trail.pop();
+        this.updateThreads();
+        return val;
+    }
+}
+
 function setup() { 
 
     // DELETE BEFORE PUSH
     // clearStorage();
+
+    // let font = loadFont('assets/fonts/Eczar.ttf');
+    // textFont(font);
 
     frameRate(60);
     gridSize = Math.min(windowWidth / 7, windowHeight / 8) * 0.95;
@@ -226,10 +355,13 @@ function showUserInfo() {
     textAlign(CENTER, CENTER);
     textSize(gridSize);
     fill(color(textColor));
+    strokeWeight(5);
+    stroke(0, 50);
+    let [rank, nextRank] = getRankAndRemaining();
     text(`${user.name}`, width / 2, gridSize);
+    textSize(gridSize / 2);
+    text(`rank:${rank}/pts to next:${nextRank}`, width / 2, gridSize * 1.5);
     textSize(gridSize / 3);
-    // let threeBestWords = user.bestWords.sort((x, y) => y.length - x.length); //.subarray(0, 2);
-    // threeBestWords = `${threeBestWords[0]}\n${threeBestWords[1]}\n${threeBestWords[2]}`;
     let scoreText = processScore(user.totalScore);
     let timeText = processTime(user.totalTime);
     let wordsText = processWords(user.totalWords);
@@ -242,6 +374,34 @@ function showUserInfo() {
     text("top scores:\n" + topScores(), width / 2, height - gridSize * 1);
 }
 
+function getRank()
+{
+    // TODO: Cache this
+    //return pointsToRank();
+    let [rank, _] = getRankAndRemaining();
+    return rank;
+}
+
+function getRankAndRemaining()
+{
+    let points = user.totalScore;
+    let lvl = 100;
+    let rank = 0;
+    while (true)
+    {
+        if (points - lvl >= 0)
+        {
+            points -= lvl;
+            rank++;
+            lvl += 10 * rank;
+        }
+        else
+        {
+            return [rank, lvl - points];
+        }
+    }
+}
+
 function getBestWords() {
     let bestWords = user.bestWords.sort((x, y) => y.length - x.length);
     bestWords = bestWords.slice(0, 5);
@@ -250,7 +410,6 @@ function getBestWords() {
         text += `${bestWords[i]}\n`;
     }
     return text;
-    // return bestWords
 }
 
 function topScores() {
@@ -388,6 +547,7 @@ function doMainGame() {
     runBonusTiles();
     runAnimatedBonusTiles();
     runLockedTiles();
+    runRank();
     highlightLine.updateThreads();
 
     makeBonusTiles();
@@ -411,6 +571,7 @@ function doMainGame() {
     drawAnimatedBonusTiles();
     drawCurrentWord();
     drawUI();
+    drawRank();
     drawTimeJustAdded();
     drawScoreSlider();
     drawShading();
@@ -917,6 +1078,43 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
 
 }
 
+function runRank()
+{
+    if (!showRankUp)
+        return;
+    newRankTimer += deltaTime;
+    if (newRankTimer > maxRankShow)
+    {
+        showRankUp = false;
+        newRankTimer = 0;
+    }
+}
+
+function drawRank() 
+{
+    if (!showRankUp)
+        return;
+    let rankText = 'new rank!\n ' + user.rank;
+    textSize(int(gridSize + cos(smoothClock / 1000) * gridSize / 4));
+    let alph;
+    if (newRankTimer < maxRankShow / 5)
+    {
+        alph = newRankTimer;
+    }
+    else if (newRankTimer > maxRankShow / 5 * 4)
+    {
+        alph = maxRankShow - newRankTimer;
+    }
+    else
+    {
+        alph = 180;
+    }
+    fill(180 + sin(smoothClock / 400) * 40, alph);
+    strokeWeight(7 + sin(smoothClock / 800) * 3, alph / 2);
+    stroke(0, 40);
+    text(rankText, gameWidth / 2, gameHeight * (1 - newRankTimer / maxRankShow));
+}
+
 function drawUI() {
     let displayTimeRaw = floor(timer / 1000);
     let minutes = floor(displayTimeRaw / 60);
@@ -1085,7 +1283,7 @@ function drawLetterArray() {
                 yOffset = slideDistanceOffset * slidingDirection;
             }
             let ch = letterArray[x][y];
-            if (ch === '*') ch = '∗';
+            if (ch === '*') ch = ' '; //'∗';
             textSize(gridSize * 0.85);
             // hightlight
             stroke(220, 60);
@@ -1478,6 +1676,15 @@ function gotGoodWord(word, wordWithBlanks)
     timeJustAdded = newTime;
     timer += newTime;
 
+    // check if we ranked up
+    let newRank = getRank();
+    if (newRank > user.rank)
+    {
+        user.rank = newRank;
+        showRankUp = true;
+        newRankTimer = 0;
+    }
+
     removeLetters(clickedTrail);
     dropBonuses(clickedTrail);
     removeLockedTiles(clickedTrail);
@@ -1627,127 +1834,6 @@ function highlightClickTrail() {
     }
 }
 
-class HighlightThread {
-    constructor(trail) {
-        this.trail = trail;
-        this.lines = [];
-    }
-
-    indexToReal(index) {
-        return (index + 1) * gridSize + gridSize / 2;
-    }
-
-    update(trail) {
-        // update the list of thread positions
-        this.trail = trail;
-        //this.lines = [];
-        if (trail.length === 0) return;
-        let [oldXoffset, oldYoffset] = [random(-1, 1) * gridSize / 16, 
-            random(-1, 1) * gridSize / 16];
-        let gq = gridSize / 64;
-        for (let index = 0; index < trail.length - 1; index++) {
-            let [x1, y1] = trail[index];
-            let [x2, y2] = trail[index + 1];
-            [x1, y1] = [this.indexToReal(x1) + oldXoffset, 
-                        this.indexToReal(y1) + oldYoffset];
-            [x2, y2] = [this.indexToReal(x2), this.indexToReal(y2)];
-            let xAmt = random(-1, 1) * gridSize / 16;
-            let yAmt = random(-1, 1) * gridSize / 16;
-            x2 += xAmt;
-            y2 += yAmt;
-            oldXoffset = xAmt;
-            oldYoffset = yAmt;
-            let clr = color(correctColor);
-            clr.setAlpha(map(index, 0, trail.length - 1, 50, 80) + random(-10, 10));    
-            let line = [x1, y1, x2, y2, clr, random(1, 2)];
-            this.lines.push(line);
-            // sometimes spawn a particle here
-            if (random() < 0.1) {
-                let dist = random();
-                let pos = [(1 - dist) * x1 + dist * x2, (1 - dist) * y1 + dist * y2];
-                let vel = [random(-gq, gq), random(-gq, gq)];
-                let life = random(150, 350);
-                let size = random(1, 15);
-                spawnParticle(pos, vel, clr, size, life);
-            }
-        }
-        // randomly remove some lines
-        for (let i = this.lines.length - 1; i >= 0; i--) {
-            if (random(0, 1) < 0.3) {
-                this.lines.splice(i, 1);
-            }
-        }
-    }
-
-    clear() {
-        this.lines = [];
-    }
-
-    draw() {
-        for (let i = 0; i < this.lines.length; i++) {
-            let [x1, y1, x2, y2, color, _strokeWeight] = this.lines[i];
-            strokeWeight(_strokeWeight);
-            stroke(color);
-            line(x1, y1, x2, y2);
-        }
-    }
-
-}
-
-class HighlightLine {
-    constructor(trail) {
-        this.trail = trail;
-        this.threads = [];
-        this.numThreads = 5;
-        this.animCounter = 0;
-        this.targetFrames = 60;
-        this.targetTime = 1000 / this.targetFrames;
-        for (let i = 0; i < this.numThreads; i++) {
-            this.threads.push(new HighlightThread(trail));
-        }
-    }
-
-    clear() {
-        this.trail = [];
-    }
-
-    removeAllPoints()
-    {
-        for (let i = 0; i < this.numThreads; i++) 
-        {
-            this.threads[i].clear();
-        }
-    }
-
-    addThread() {
-        // add a thread to our highlight line
-        this.threads.push(new HighlightThread(this.trail));
-    }
-
-    updateThreads() {
-        for (let i = 0; i < this.threads.length; i++) {
-            this.threads[i].update(this.trail);
-        }
-    }
-
-    draw() {
-        for (let i = 0; i < this.threads.length; i++) {
-            this.threads[i].draw();
-        }
-    }
-
-    push(location) {
-        this.trail.push(location);
-        this.updateThreads();
-    }
-
-    pop() {
-        let val = this.trail.pop();
-        this.updateThreads();
-        return val;
-    }
-}
-
 function drawHighlightLine()
 {
     highlightLine.draw();
@@ -1770,6 +1856,8 @@ function doGridsTouch(x1, y1, x2, y2) {
 function checkWord(word) {
     return trie.search(word);
 }
+
+////// PARTICLES
 
 function spawnParticle(pos, vel, color, size, life) {
     particles.push({
@@ -1807,6 +1895,8 @@ function drawParticles() {
     }
 }
 
+////// LOADING & SAVING
+
 function loadGame() {
     let savedGame = getItem('savedGame');
     if (savedGame) {
@@ -1841,6 +1931,22 @@ function tryLoadSaveGame() {
         haveSavedGame = false;
     }
 }
+
+function loadHighscores() {
+    let highscoreString = getItem('highscores');
+    if (!highscoreString) {
+        storeItem('highscores', '0,0,0,0');
+        highscoreString = '0,0,0,0';
+    }
+    highScores = highscoreString.split(',').map(x => int(x));
+}
+
+function saveHighscores() {
+    let highscoreString = highScores.join(',');
+    storeItem('highscores', highscoreString);
+}
+
+////// MAIN MENU + INTRO
 
 function doMainMenu() {
 
@@ -1883,20 +1989,6 @@ function showResume()
         fill(255, 160);
         text('resume', x, y);
     }
-}
-
-function loadHighscores() {
-    let highscoreString = getItem('highscores');
-    if (!highscoreString) {
-        storeItem('highscores', '0,0,0,0');
-        highscoreString = '0,0,0,0';
-    }
-    highScores = highscoreString.split(',').map(x => int(x));
-}
-
-function saveHighscores() {
-    let highscoreString = highScores.join(',');
-    storeItem('highscores', highscoreString);
 }
 
 function handleMainMenuMouse() {
@@ -2010,6 +2102,8 @@ function doIntro() {
     }
 }
 
+////// LOCKED TILE STUFF
+
 function runLockedTiles() {
     for (let j = animatedLockedTiles.length - 1; j>=0; j--) {
         animatedLockedTiles[j][2] -= deltaTime;
@@ -2115,6 +2209,8 @@ function removeLockedTiles(trail) {
         }
     }
 }
+
+////// BONUS TILE STUFF
 
 function drawBonusTile(bonusTypeTile, gridX, gridY, bonusTime) {
     textAlign(CENTER, CENTER);
