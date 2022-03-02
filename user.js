@@ -58,7 +58,7 @@ function getRandomUserName()
 function updateUserData(score, time, word)
 {
     user.totalScore += score;
-    user.totalTime += int(time);
+    user.totalTime += time;
     user.totalWords += 1;
     user.totalLetters += word.length;
     if (user.bestWords.length < 10) 

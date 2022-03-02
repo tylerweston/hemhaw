@@ -44,6 +44,10 @@ TODO:
 
 - setup python anywhere flask server and show great words on other users games!
 
+- Something is wrong with how saving is working now, fix that.
+  do not save points for practice games. Practice time only counts
+  towards total time. 
+- Long words should not be saved during practice sessions
 
 - make sure if bad user data is loaded, it is fixed
 - add hemhaw easter egg, if you ever spell it out do something cool
@@ -78,6 +82,11 @@ let scoreJustAdded = 0;
 let scrollTimer = 0;
 const maxScrollTimer = 2500;
 
+let haveTimeAdded = false;
+let timeJustAdded = 0;
+let timeAddedTimer = 0;
+const timeJustAddedMaxTimer = 2000;
+
 let mainCountdown = 3000;
 
 let gameOverMouseCount = 0;
@@ -106,6 +115,7 @@ let eatGameoverClickFlag = false;
 let exitToMainMenuTimer = 0;
 
 const maxHightlightTime = 1000;
+
 const slidingMaxTime = 200;
 let slidingTimer = 0;
 let rowSliding = false;
@@ -118,10 +128,10 @@ let originalArrowY = 0;
 let deBroglieTimer = 0;
 
 // note these have to add up to 100 maximum
-const letterBonusPercentage = 0.1;
-const wordBonusPercentage = 0.05;
+const letterBonusPercentage = 0.08;
+const wordBonusPercentage = 0.04;
 
-const lockedTilePercentage = 0.0005;
+const lockedTilePercentage = 0.0004;
 // const lockedTilePercentage = 1;
 const maxLockedTiles = 2;
 
@@ -136,6 +146,8 @@ let mainMenuSelected = 0;
 let showingUserInfo = false;
 
 let highlightLine;
+
+let lastTime = 0;
 
 class BonusTileType {
     static TripleLetter = new BonusTileType('Triple Letter');
@@ -161,7 +173,7 @@ const difficulties = {
     1: {name: 'medium', minutes: 1, secondPerScore: 0.33},
     2: {name: 'hard', minutes: 0.5, secondPerScore: 0.25},
     3: {name: 'blitz', minutes: 0.1, secondPerScore: 0.25},
-    4: {name: 'unlimited', minutes: -1, secondPerScore: 0}
+    4: {name: 'practice', minutes: -1, secondPerScore: 0}
 }
 
 // Track highscores across the 4 levels
@@ -176,7 +188,14 @@ let smoothClock = 0;
 let introLength = 1000;
 let introTimer; // = 0;
 
+let newTime = 0;
+let newTimeDisplayTimer = 0;
+
 function setup() { 
+
+    // DELETE BEFORE PUSH
+    // clearStorage();
+
     frameRate(60);
     gridSize = Math.min(windowWidth / 7, windowHeight / 8) * 0.95;
     gameWidth = int(7 * gridSize);
@@ -255,6 +274,8 @@ function processScore(score)
 
 function processTime(time)
 {
+    // convert to seconds
+    time = Math.floor(time / 1000);
     // convert seconds to days, hours, minutes, and seconds
     let days = Math.floor(time / (24 * 60 * 60));
     let hours = Math.floor((time % (24 * 60 * 60)) / (60 * 60));
@@ -275,8 +296,10 @@ function processTime(time)
     }
     if (seconds > 0)
     {
-        timeText += `${seconds} s`;
+        timeText += `${nf(seconds, 2)} s`;
     }
+    if (timeText === '')
+        timeText = '0';
     return timeText;
 }
 
@@ -328,6 +351,7 @@ function doCountdown() {
     drawUI();
     if (mainCountdown <= 0)
     {
+        lastTime = 0;
         gameState = GameStates.MainGame;
         return;
     } 
@@ -392,6 +416,7 @@ function doMainGame() {
     drawAnimatedBonusTiles();
     drawCurrentWord();
     drawUI();
+    drawTimeJustAdded();
     drawScoreSlider();
     drawShading();
     drawParticles();
@@ -543,6 +568,9 @@ function runTimers() {
     {
         // this is fired once so we can store high score here
         finalWordCheck();
+        // write any remaining time
+        let remainingTime = smoothClock - lastTime;
+        updateUserData(0, remainingTime, '');
         if (score > highScores[gameDifficulty])
         {
             gotNewHighscore = true;
@@ -573,6 +601,26 @@ function runTimers() {
     if (scrollTimer > maxScrollTimer) {
         scrollTimer = 0;
         scoreJustAdded = false;
+    }
+    if (haveTimeAdded)
+    {
+        timeAddedTimer += deltaTime;
+        if (timeAddedTimer > timeJustAddedMaxTimer)
+        {
+            haveTimeAdded = false;
+            timeAddedTimer = 0;
+        }
+    }
+}
+
+function drawTimeJustAdded()
+{
+    if (haveTimeAdded && timeJustAdded > 1000)
+    {    
+        textSize(gridSize / 2);
+        fill(255, 180);
+        let yPos = gameHeight - ((gridSize / 4) * (timeAddedTimer / 1000));
+        text('+' + floor(timeJustAdded/1000), gameWidth / 2 + gridSize * 2, yPos);
     }
 }
 
@@ -692,6 +740,7 @@ function resetGame()
     gameOverMouseCount = 0;
     exitToMainMenuTimer = 0;
     smoothClock = 0;
+    lastTime = 0;
     makeLetterArray();
 }
 
@@ -1299,7 +1348,7 @@ function isMouseCloseToCenterOfSquare(gridX, gridY) {
     let dx = mouseX - x;
     let dy = mouseY - y;
     let dist = sqrt(dx * dx + dy * dy);
-    return dist < gridSize / 2.5;
+    return dist < gridSize / 2;
 }
 
 function getClosestSquare() {
@@ -1391,7 +1440,7 @@ function dropBonuses(trail) {
             {
                 bonusTiles.splice(j, 1);
                 // we also create an animated tile here
-                let randomLife = random(350, 650);
+                let randomLife = random(550, 850);
                 let tile = [bonusType, bonusX, bonusY, randomLife, randomLife];
                 animatedBonusTiles.push(tile);
             }
@@ -1403,20 +1452,7 @@ function doWordCheck() {
     let isWord = checkWord(currentWord);
     if (isWord) 
     {
-        highlightColor = '#00EE00';
-        scoreJustAdded = scoreWordWithBonus(currentWord);
-        scrollTimer = 0;
-        score += scoreJustAdded;
-        let newTime = scoreJustAdded * 1000 * difficulties[gameDifficulty].secondPerScore;
-        timer += newTime;
-        removeLetters(clickedTrail);
-        dropBonuses(clickedTrail);
-        removeLockedTiles(clickedTrail);
-        replaceLetters();
-        highlightLine.removeAllPoints();
-        savedWord = isWord;
-        // update and save user data
-        updateUserData(scoreJustAdded, newTime / 1000, isWord);
+        gotGoodWord(isWord, currentWord);
     } 
     else 
     {
@@ -1432,6 +1468,61 @@ function doWordCheck() {
     lastClicked = [];
 }
 
+
+function gotGoodWord(word, wordWithBlanks)
+{
+    highlightColor = '#00EE00';
+
+    scoreJustAdded = scoreWordWithBonus(wordWithBlanks);
+    scrollTimer = 0;
+    score += scoreJustAdded;
+
+    newTime = calculateTimeScore(scoreJustAdded);
+    haveTimeAdded = true;
+    timeAddedTimer = 0;
+    timeJustAdded = newTime;
+    timer += newTime;
+
+    removeLetters(clickedTrail);
+    dropBonuses(clickedTrail);
+    removeLockedTiles(clickedTrail);
+    replaceLetters();
+    highlightLine.removeAllPoints();
+
+    savedWord = word;
+
+    // update and save user data
+    // if we are in practice mode, don't count anything
+    if (gameDifficulty === 4)
+        return;
+    
+    let timeNow = smoothClock;
+    let timeElapsed = timeNow - lastTime;
+
+    lastTime = timeNow;
+    // otherwise, save our progress
+    updateUserData(scoreJustAdded, timeElapsed, word);
+
+}
+
+function calculateTimeScore(score)
+{
+    return score * 1000 * difficulties[gameDifficulty].secondPerScore;
+}
+
+function runTimerDisplayer()
+{
+    if (gameState === GameStates.MainGame)
+    {
+        newTimeDisplayTimer += deltaTime;
+        if (newTimeDisplayTimer > 2)
+        {
+            newTimeDisplayTimer = 0;
+            newTimeDisplay = false;
+        }
+    }
+}
+
 function finalWordCheck()
 {
     let isWord = checkWord(currentWord);
@@ -1443,6 +1534,12 @@ function finalWordCheck()
         gotNewHighscore = true;
         highScores[gameDifficulty] = score;
     }
+    let timeNow = smoothClock;
+    let timeElapsed = timeNow - lastTime;
+
+    lastTime = timeNow;
+    // otherwise, save our progress
+    updateUserData(newScore, timeElapsed, isWord);
     currentWord = '';
     clickedTrail = [];
     highlightLine.clear();
@@ -1481,6 +1578,7 @@ function highlightClickTrail() {
     // highlight squares
     noStroke();
     let trailColor = color(highlightedSquareColor);
+    let gq = gridSize / 256;
     for (let i = 0; i < clickedTrail.length; i++) {
         trailColor.setAlpha(map(i, 0, clickedTrail.length, 80, 180) + (sin(smoothClock / 512 + i) * 20));
         fill(trailColor);
@@ -1488,6 +1586,49 @@ function highlightClickTrail() {
         let y = clickedTrail[i][1] + 1;
 
         rect(x * gridSize + 1, y * gridSize + 1, gridSize - 2, gridSize - 2);
+        // for (let j = 0; j < floor(random(1, 3)); j++) {
+        //     let pos = [x * gridSize + random(0, gridSize),
+        //        y * gridSize + random(0, gridSize)];
+        //     let vel = [random(-1, 1) * gq, random(-1, 1) * gq];
+        //     let size = random(1, 8);
+        //     let clr = color(correctColor);
+        //     // clr.setAlpha(random(80, 180));
+        //     let life = random(150, 350);
+        //     spawnParticle(pos, vel, clr, size, life);
+            
+        // }
+        if (i <= clickedTrail.length - 2) {
+            if (random() < 0.1) {
+                // let dist = random();
+                // let pos = [(1 - dist) * x1 + dist * x2, (1 - dist) * y1 + dist * y2];
+                let [x2, y2] = clickedTrail[i + 1];
+                // x2 +=1; y2 += 1;
+                let x1 = x * gridSize + gridSize / 2;
+                let y1 = y * gridSize + gridSize / 2;
+                x2 = (x2 + 1) * gridSize + gridSize / 2;
+                y2 = (y2 + 1) * gridSize + gridSize / 2;
+                // stroke(255, 0, 0);
+                // strokeWeight(2);
+                // line(x1, y1, x2, y2);
+                let pos = [random(x1, x2) + random(-gridSize / 2, gridSize / 2), random(y1, y2) + random(-gridSize / 2, gridSize / 2)];
+                
+                let xVel = (x2 - x1) / gq;
+                let yVel = (y2 - y1) / gq;
+                
+                let vel = [xVel / 128 * random(0, 2), yVel / 128 * random(0, 2)];
+                let life = random(150, 550);
+                let size = random(2, 8);
+                // let clr = color(correctColor);
+                // clr.setAlpha(random(80, 180));
+                spawnParticle(pos, vel, trailColor, size, life);
+            }
+            // let [x2, y2] = clickedTrail[i + 1];
+            // x2 +=1; y2 += 1;
+            // let x1 = x * gridSize;
+            // let y1 = y * gridSize;
+            // let x2 = (x2 + 1) * gridSize;
+            // let y2 = (y2 + 1) * gridSize;
+        }
     }
 }
 
@@ -1810,6 +1951,7 @@ function handleMainMenuMouse() {
         else
         {
             // select the difficulty from our array
+            // we're starting a new game
             playingSavedGame = false;
             resetGame();
             gameDifficulty = selected;
@@ -1971,7 +2113,7 @@ function removeLockedTiles(trail) {
             {
                 lockedTiles.splice(j, 1);
                 // we also create an animated tile here
-                let randomLife = random(350, 550);
+                let randomLife = random(550, 850);
                 let tile = [_x, _y, randomLife, randomLife];
                 animatedLockedTiles.push(tile);
             }
@@ -2127,7 +2269,8 @@ function makeBonusTiles() {
     // find a place to put the tile
     let xGuess; 
     let yGuess; 
-    while (true)
+    let numTryPlaced = 0;
+    while (true && numTryPlaced < 50)
     {
         xGuess = floor(Math.random() * 5);
         yGuess = floor(Math.random() * 5);
@@ -2145,7 +2288,9 @@ function makeBonusTiles() {
         {
             break;
         }
+        numTryPlaced++;
     }
+    if (numTryPlaced >= 50) return; //no place to put tile
     // OK, now we have a place to put the tile
     let tileType;
     let lifeSpan;
