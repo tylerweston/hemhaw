@@ -86,8 +86,6 @@ let trie;
 
 let gameState;
 
-let showingUserInfo = false;
-
 // palette data
 let backgroundColor;
 let correctColor;
@@ -135,6 +133,7 @@ let animatedLockedTiles = [];
 let mainMenuNeedUnclick = false;
 let mainMenuClickTimer = 0;
 let mainMenuSelected = 0;
+let showingUserInfo = false;
 
 let highlightLine;
 
@@ -903,7 +902,11 @@ function drawUI() {
     fill(color(textColor));
     text(txt, gameWidth / 2, gameHeight - gridSize / 8 + 2);
 
+    drawUserName();
+}
 
+function drawUserName() 
+{    
     if (user && user.name !== '') 
     {
         // TODO: Check if user name is too long
@@ -911,7 +914,7 @@ function drawUI() {
         textAlign(CENTER, CENTER);
         noStroke();
         fill(160, 170);
-        if (mouseX > 2 * gridSize && mouseX < 4 * gridSize && mouseY > 0 && mouseY < gridSize / 2)
+        if (mouseX > 2 * gridSize && mouseX < 5 * gridSize && mouseY > 0 && mouseY < gridSize / 2)
             fill(255, 170);
         text(user.name, gameWidth / 2, gridSize / 4);
     }
@@ -1314,6 +1317,8 @@ function mouseReleased() {
     }
     if (gameState === GameStates.MainMenu)
     {
+        if (showingUserInfo)
+            showingUserInfo = false;
         if (mainMenuNeedUnclick)
             mainMenuNeedUnclick = false;
         
@@ -1706,11 +1711,19 @@ function doMainMenu() {
     fill(0, 10);
     rect(0, 0, gameWidth, gameHeight);
     // main menu is active
-    drawTitle();
-    drawDifficulties();
-    showResume();
-    // handle mouse clicks
-    handleMainMenuMouse();
+    if (showingUserInfo)
+    {
+        showUserInfo();
+    }
+    else
+    {
+        drawTitle();
+        drawDifficulties();
+        drawUserName();
+        showResume();
+        // handle mouse clicks
+        handleMainMenuMouse();
+    }
 }
 
 function showResume() 
@@ -1752,6 +1765,16 @@ function saveHighscores() {
 function handleMainMenuMouse() {
     let selected;
     let resumeSelected;
+    if (mouseIsPressed && mouseY < gridSize / 2 && mouseY > 0
+        && mouseX > gridSize * 2 && mouseX < gridSize * 5) 
+    {
+        //  showUserInfo();
+        showingUserInfo = true;
+    }
+    else
+    {
+        showingUserInfo = false;
+    }
     if (mouseY > gridSize * 2 && mouseY < gridSize * 7) {
         selected = Math.floor((mouseY - gridSize) / gridSize) - 1;
     }
