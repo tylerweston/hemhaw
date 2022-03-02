@@ -1733,6 +1733,7 @@ function showResume()
     let y = gameHeight - gridSize + gridSize / 2;
     let selected;
     if (mouseY > gridSize * 7) selected = true;
+    textSize(gridSize);
     if (selected) {
         fill(255);
         stroke(180, 150);
