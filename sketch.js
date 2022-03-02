@@ -222,7 +222,7 @@ class HighlightThread {
             oldXoffset = xAmt;
             oldYoffset = yAmt;
             let clr = color(correctColor);
-            clr.setAlpha(map(index, 0, trail.length - 1, 50, 80) + random(-10, 10));    
+            clr.setAlpha(map(index, 0, trail.length - 1, 30, 60) + random(-10, 10));    
             let line = [x1, y1, x2, y2, clr, random(1, 2)];
             this.lines.push(line);
             // sometimes spawn a particle here
@@ -237,7 +237,7 @@ class HighlightThread {
         }
         // randomly remove some lines
         for (let i = this.lines.length - 1; i >= 0; i--) {
-            if (random(0, 1) < 0.3) {
+            if (random(0, 1) < 0.25) {
                 this.lines.splice(i, 1);
             }
         }
@@ -1642,6 +1642,14 @@ function dropBonuses(trail) {
 }
 
 function doWordCheck() {
+    if (currentWord.length === 1) 
+    {
+        currentWord = '';
+        clickedTrail = [];
+        highlightLine.clear();
+        lastClicked = [];
+        return;
+    }
     let isWord = checkWord(currentWord);
     if (isWord) 
     {
