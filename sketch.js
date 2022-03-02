@@ -42,14 +42,15 @@ TODO:
     - resume
     - discard and exit
 
-- lock a row and column and can only be unlocked if used in a word
+- setup python anywhere flask server and show great words on other users games!
+
+
+- make sure if bad user data is loaded, it is fixed
 - add hemhaw easter egg, if you ever spell it out do something cool
 - add sound effects
 - we don't need to keep the wordlist loaded after we create the trie? How do we deal with that?
 - add more palettes
 - more particle effects and better scoring juice
-- add a leaderboard and highest word scores
-- a bit of jankiness with holding down arrow buttons to shift
 
 - if you move a grid that has lines drawn on it, move the lines with the grid
 
@@ -214,8 +215,8 @@ function showUserInfo() {
     fill(color(textColor));
     text(`${user.name}`, width / 2, gridSize);
     textSize(gridSize / 3);
-    let threeBestWords = user.bestWords.sort((x, y) => y.length - x.length); //.subarray(0, 2);
-    threeBestWords = `${threeBestWords[0]}\n${threeBestWords[1]}\n${threeBestWords[2]}`;
+    // let threeBestWords = user.bestWords.sort((x, y) => y.length - x.length); //.subarray(0, 2);
+    // threeBestWords = `${threeBestWords[0]}\n${threeBestWords[1]}\n${threeBestWords[2]}`;
     let scoreText = processScore(user.totalScore);
     let timeText = processTime(user.totalTime);
     let wordsText = processWords(user.totalWords);
@@ -223,15 +224,26 @@ function showUserInfo() {
     "total score: " + scoreText + "\n" +
     "total time: " + timeText + "\n" +
     "total words: " + wordsText + "\n" +
-    "best words:\n" + threeBestWords, width / 2, height / 2);
+    "best words:\n" + getBestWords(), width / 2, height / 2);
     textSize(gridSize / 4);
-    text("top scores:\n" + topScores(), width / 2, height - gridSize * 1.5);
+    text("top scores:\n" + topScores(), width / 2, height - gridSize * 1);
+}
+
+function getBestWords() {
+    let bestWords = user.bestWords.sort((x, y) => y.length - x.length);
+    bestWords = bestWords.slice(0, 5);
+    let text = '';
+    for (let i = 0; i < bestWords.length; i++) {
+        text += `${bestWords[i]}\n`;
+    }
+    return text;
+    // return bestWords
 }
 
 function topScores() {
     let topScoresTexts = '';
     for (let i = 0; i < highScores.length; i++) {
-        topScoresTexts += `${difficulties[i].name}. ${processScore(highScores[i])}\n`;
+        topScoresTexts += `${difficulties[i].name}: ${processScore(highScores[i])}\n`;
     }
     return topScoresTexts;
 }
@@ -1384,7 +1396,8 @@ function dropBonuses(trail) {
 
 function doWordCheck() {
     let isWord = checkWord(currentWord);
-    if (isWord) {
+    if (isWord) 
+    {
         highlightColor = '#00EE00';
         scoreJustAdded = scoreWordWithBonus(currentWord);
         scrollTimer = 0;
@@ -1399,21 +1412,19 @@ function doWordCheck() {
         savedWord = isWord;
         // update and save user data
         updateUserData(scoreJustAdded, newTime / 1000, isWord);
-
-    } else {
+    } 
+    else 
+    {
         highlightColor = '#EE0000';
         savedWord = currentWord;
     }
     // start the highlight
     highlightCounter = 0;
     savedTrail = clickedTrail;
-
-
     currentWord = '';
     clickedTrail = [];
     highlightLine.clear();
     lastClicked = [];
-
 }
 
 function finalWordCheck()
@@ -1444,9 +1455,6 @@ function drawCurrentWord() {
         textSize(textsizeGuess);
     }
     textAlign(CENTER, CENTER);
-    // stroke(color(gridColor));
-    // fill(color(textColor));
-    // text(currentWord, gameWidth / 2, 7 * gridSize + 2);
 
     // hightlight
     stroke(220, 60);
@@ -1469,7 +1477,7 @@ function highlightClickTrail() {
     noStroke();
     let trailColor = color(highlightedSquareColor);
     for (let i = 0; i < clickedTrail.length; i++) {
-        trailColor.setAlpha(map(i, 0, clickedTrail.length, 100, 200));
+        trailColor.setAlpha(map(i, 0, clickedTrail.length, 80, 180) + (sin(smoothClock / 512 + i) * 20));
         fill(trailColor);
         let x = clickedTrail[i][0] + 1;
         let y = clickedTrail[i][1] + 1;

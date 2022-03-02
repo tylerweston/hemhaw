@@ -1,23 +1,11 @@
 let user; 
-// = {
-//     name: '',
-//     totalscore: 0,
-//     totaltime: 0,
-//     totalwords: 0,
-//     totalletters: 0,
-//     bestwords: []
-    
-// }
-
-// function doLogin() {
-
-// }
 
 // note totaltime is stored in seconds, not milliseconds
 function emptyUser() 
 {
     // create a new user
-    let newUser = {
+    let newUser = 
+    {
         name: '',
         totalScore: 0,
         totalTime: 0,
@@ -33,7 +21,8 @@ function tryLoadUser()
     if (getItem('user') === null)
     {
         // create a new user
-        let newUser = {
+        let newUser = 
+        {
             name: getRandomUserName(),
             totalScore: 0,
             totalTime: 0,
@@ -72,20 +61,24 @@ function updateUserData(score, time, word)
     user.totalTime += int(time);
     user.totalWords += 1;
     user.totalLetters += word.length;
-    if (user.bestWords.length < 10) {
+    if (user.bestWords.length < 10) 
+    {
         user.bestWords.push(word);
-    } else {
+    } 
+    else 
+    {
         let min = user.bestWords[0].length;
         let minIndex = 0;
-        for (let i = 1; i < user.bestWords.length; i++) {
-            if (user.bestWords[i].length < min) {
+        for (let i = 1; i < user.bestWords.length; i++) 
+        {
+            if (user.bestWords[i].length < min) 
+            {
                 min = user.bestWords[i].length;
                 minIndex = i;
             }
         }
-        if (word.length >= min) {
+        if (word.length >= min) 
             user.bestWords[minIndex] = word;
-        }
     }
     saveUser();
 }
