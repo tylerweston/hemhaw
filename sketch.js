@@ -44,11 +44,6 @@ TODO:
 
 - setup python anywhere flask server and show great words on other users games!
 
-- Something is wrong with how saving is working now, fix that.
-  do not save points for practice games. Practice time only counts
-  towards total time. 
-- Long words should not be saved during practice sessions
-
 - make sure if bad user data is loaded, it is fixed
 - add hemhaw easter egg, if you ever spell it out do something cool
 - add sound effects
@@ -1348,7 +1343,7 @@ function isMouseCloseToCenterOfSquare(gridX, gridY) {
     let dx = mouseX - x;
     let dy = mouseY - y;
     let dist = sqrt(dx * dx + dy * dy);
-    return dist < gridSize / 2;
+    return dist < gridSize / 3;
 }
 
 function getClosestSquare() {
