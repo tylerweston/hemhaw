@@ -9,8 +9,8 @@ const letterPoints = [1, 3, 3, 2, 1, 4, 2, 4, 1, 8, 5, 1, 3, 1, 1, 3, 10, 1, 1, 
 
 let letterArray = [[], [], [], [], []];
 let letterFadeGrid = [[], [], [], [], []];
-const vowelToConsonantRatio = 0.45;
-const wildcardPercent = 0.1;
+const vowelToConsonantRatio = 0.4;
+const wildcardPercent = 0.05;
 
 function makeLetterArray() {
     for (let x = 0; x < 5; x++) {

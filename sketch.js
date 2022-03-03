@@ -312,6 +312,8 @@ class HighlightLine {
     }
 }
 
+/////// SETUP AND DRAW FUNCTIONS
+
 function setup() { 
 
     // DELETE BEFORE PUSH
@@ -349,149 +351,27 @@ function setup() {
     gameState = GameStates.Intro;
 } 
 
-function showUserInfo() {
-    fill(0, 10);
-    rect(0, 0, width, height);
-    textAlign(CENTER, CENTER);
-    textSize(gridSize);
-    fill(color(textColor));
-    strokeWeight(5);
-    stroke(0, 50);
-    let [rank, nextRank] = getRankAndRemaining();
-    text(`${user.name}`, width / 2, gridSize);
-    textSize(gridSize / 2);
-    text(`rank:${rank}/pts to next:${nextRank}`, width / 2, gridSize * 1.5);
-    textSize(gridSize / 3);
-    let scoreText = processScore(user.totalScore);
-    let timeText = processTime(user.totalTime);
-    let wordsText = processWords(user.totalWords);
-    text(
-    "total score: " + scoreText + "\n" +
-    "total time: " + timeText + "\n" +
-    "total words: " + wordsText + "\n" +
-    "best words:\n" + getBestWords(), width / 2, height / 2);
-    textSize(gridSize / 4);
-    text("top scores:\n" + topScores(), width / 2, height - gridSize * 1);
-}
-
-function getRank()
-{
-    // TODO: Cache this
-    //return pointsToRank();
-    let [rank, _] = getRankAndRemaining();
-    return rank;
-}
-
-function getRankAndRemaining()
-{
-    let points = user.totalScore;
-    let lvl = 100;
-    let rank = 0;
-    while (true)
-    {
-        if (points - lvl >= 0)
-        {
-            points -= lvl;
-            rank++;
-            lvl += 10 * rank;
-        }
-        else
-        {
-            return [rank, lvl - points];
-        }
+function draw() { 
+    switch (gameState) {
+        case GameStates.Intro:
+            doIntro();
+            break;
+        case GameStates.MainMenu:
+            doMainMenu();
+            break;
+        case GameStates.Countdown:
+            doCountdown();
+            break;
+        case GameStates.MainGame:
+            doMainGame();
+            break;
+        case GameStates.EndGame:
+            gameOver();
+            break;
     }
 }
 
-function getBestWords() {
-    let bestWords = user.bestWords.sort((x, y) => y.length - x.length);
-    bestWords = bestWords.slice(0, 5);
-    let text = '';
-    for (let i = 0; i < bestWords.length; i++) {
-        text += `${bestWords[i]}\n`;
-    }
-    return text;
-}
-
-function topScores() {
-    let topScoresTexts = '';
-    for (let i = 0; i < highScores.length; i++) {
-        topScoresTexts += `${difficulties[i].name}: ${processScore(highScores[i])}\n`;
-    }
-    return topScoresTexts;
-}
-
-function processScore(score)
-{
-    let scoreText = score.toLocaleString();
-    return scoreText;
-}
-
-function processTime(time)
-{
-    // convert to seconds
-    time = Math.floor(time / 1000);
-    // convert seconds to days, hours, minutes, and seconds
-    let days = Math.floor(time / (24 * 60 * 60));
-    let hours = Math.floor((time % (24 * 60 * 60)) / (60 * 60));
-    let minutes = Math.floor((time % (60 * 60)) / 60);
-    let seconds = Math.floor(time % 60);
-    let timeText = '';
-    if (days > 0)
-    {
-        timeText += `${days} d `;
-    }
-    if (hours > 0)
-    {
-        timeText += `${hours} h `;
-    }
-    if (minutes > 0)
-    {
-        timeText += `${minutes} m `;
-    }
-    if (seconds > 0)
-    {
-        timeText += `${nf(seconds, 2)} s`;
-    }
-    if (timeText === '')
-        timeText = '0';
-    return timeText;
-}
-
-function processWords(words)
-{
-    return words;
-}
-
-function printConsoleGreeting()
-{
-    console.log("hemhaw");
-    console.log("Tyler Weston, February/March 2022, https://github.com/tylerweston/hemhaw");
-}
-
-function populateTrie() {
-    // Get the word list and build out the trie 
-    let listOfWords = wordlist();
-    for (let i = 0; i < listOfWords.length; i++) {
-        trie.add(listOfWords[i]);
-    }
-}
-
-function loadRandomPalette() {
-    // Get a new random palette and save it
-    let randomPaletteIndex = floor(random(0, palettes.length));
-    let randomPalette = palettes[randomPaletteIndex];
-    [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = randomPalette;
-    if (random() < 0.5)
-    {
-        [backgroundColor, gridColor] = [gridColor, backgroundColor];
-    }
-    storeItem('palette', randomPaletteIndex);
-}
-
-function loadPalette(index) {
-    let palette = palettes[index];
-    [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = palette;
-}
+/////// MAIN STATES
 
 function doCountdown() {
     // Countdown to the start of the game
@@ -577,207 +457,6 @@ function doMainGame() {
     drawShading();
     drawParticles();
     checkExitGame();
-}
-
-function checkExitGame() {
-    if (gameState !== GameStates.MainGame) return;
-    if (!mouseIsPressed || mouseButton != LEFT) 
-    {
-        exitToMainMenuTimer = 0;
-        return;
-    }
-    if (mouseX > gameWidth - gridSize / 2 && mouseY < gridSize / 2) {
-        fill(0, map(exitToMainMenuTimer, 0, 500, 0, 180));
-        noStroke();
-        rect(0, 0, gameWidth, gameHeight);
-        exitToMainMenuTimer += deltaTime;
-        if (exitToMainMenuTimer > 500) {
-            if (gameDifficulty == 4)
-            {
-                mainMenuClickTimer = 0;
-                mainMenuNeedUnclick = true;
-                exitToMainMenuTimer = 0;
-                resetGame();
-                gameState = GameStates.MainMenu;
-            }
-            else
-            {
-                // TODO: If we have a saved game, we want to confirm
-                // overwriting it!
-                saveGame();
-                haveSavedGame = true;
-                gameState = GameStates.MainMenu;
-            }
-        }
-    }
-    else
-    {
-        exitToMainMenuTimer = 0;
-    }
-}
-
-function draw() { 
-    switch (gameState) {
-        case GameStates.Intro:
-            doIntro();
-            break;
-        case GameStates.MainMenu:
-            doMainMenu();
-            break;
-        case GameStates.Countdown:
-            doCountdown();
-            break;
-        case GameStates.MainGame:
-            doMainGame();
-            break;
-        case GameStates.EndGame:
-            gameOver();
-            break;
-    }
-}
-
-function drawDeBroglie() {
-    // adapted from
-    // https://beetrandahiya.github.io/ChelseaJS-docs/examples/debroglie_rainbow.html
-    deBroglieTimer += deltaTime;
-    colorMode(HSB);
-    let t = deBroglieTimer / 20;
-    if (deBroglieTimer > 1000000) {
-        deBroglieTimer = 0;
-    }
-    for(j = 0; j < 7; j++)
-    {
-        for(i = 0; i <= 360; i += 3)
-        {
-            r = (gameWidth/3)+(gameWidth/2)*sin(radians(10*i+t+7*j))*sin(radians(10*i+t+7*j));
-            y = r*sin(radians(i));
-            x = r*cos(radians(i));
-            y = gameHeight/2-y;
-            x = gameWidth/2+x;
-            noStroke();
-            fill(color(30 * j, 255, 150, 200));
-            circle(x, y, 25, 25);
-        }
-    }
-    colorMode(RGB);
-}
-
-function drawShading() {
-    noFill();
-    stroke(0, 50);
-    strokeWeight(8);
-    rect(gridSize, gridSize, gridSize * 5, gridSize * 5);
-}
-
-function checkStillClickedArrow()
-{
-    let xClicked = originalArrowX;
-    let yClicked = originalArrowY;
-    return isMouseWithinArrowSquare(xClicked, yClicked) && mouseIsPressed;
-}
-
-function isMouseWithinArrowSquare(x, y) {
-    let gridX = floor(mouseX / gridSize);
-    let gridY = floor(mouseY / gridSize);
-    let xMin = 0;
-    let xMax = width;
-    let yMin = 0;
-    let yMax = height;
-    if (x===0) xMin = gridSize / 2;
-    if (x===6) xMax = width - gridSize / 2;
-    if (y===0) yMin = gridSize / 2;
-    if (y===6) yMax = 7 * gridSize - gridSize / 2;
-    return gridX === x && gridY === y &&
-        xMin <= mouseX && mouseX <= xMax &&
-        yMin <= mouseY && mouseY <= yMax;
-}
-
-function runTimers() {
-    // TODO: Refactor these clocks, they can be classes
-    // smoothClock will run in all game modes, run up, and
-    // reset at very large intervals. This can be used to run
-    // any animation timers.
-    smoothClock += deltaTime;
-    if (gameState === GameStates.MainGame) {
-        totalTimePlayed += deltaTime;
-    }
-    if (gameDifficulty !== 4)   // don't countdown in unlimited mode
-        timer -= deltaTime;
-    if (doingSlide) {
-        slidingTimer += deltaTime;
-        if (slidingTimer >= slidingMaxTime) {
-            slideLine(rowSliding, colSliding, slidingDirection);
-            slidingTimer = 0;
-            // if we're still clicking over the arrow, keep sliding
-            if (checkStillClickedArrow()) {
-
-            }
-            else
-            {
-                doingSlide = false;
-                rowSliding = false;
-                colSliding = false;
-            }
-        }
-    }
-    if (gameDifficulty !== 4 && timer <= 0)
-    {
-        // this is fired once so we can store high score here
-        finalWordCheck();
-        // write any remaining time
-        let remainingTime = smoothClock - lastTime;
-        updateUserData(0, remainingTime, '');
-        if (score > highScores[gameDifficulty])
-        {
-            gotNewHighscore = true;
-            highScores[gameDifficulty] = score;
-            saveHighscores();
-        }
-        timer = 0;
-        if (mouseIsPressed && mouseButton === LEFT) 
-        {
-            eatGameoverClickFlag = true;
-        }
-        //isGameOver = true;
-        if (playingSavedGame)
-        {
-            eraseSaveGame();
-        }
-        gameState = GameStates.EndGame;
-        deBroglieTimer = 0;
-    }
-    highlightCounter += deltaTime;
-    if (highlightCounter > maxHightlightTime) {
-        savedTrail = [];
-        savedWord = null;
-        highlightCounter = 0;
-        highlightColor = '#000000';
-    }
-    scrollTimer += deltaTime;
-    if (scrollTimer > maxScrollTimer) {
-        scrollTimer = 0;
-        scoreJustAdded = false;
-    }
-    if (haveTimeAdded)
-    {
-        timeAddedTimer += deltaTime;
-        if (timeAddedTimer > timeJustAddedMaxTimer)
-        {
-            haveTimeAdded = false;
-            timeAddedTimer = 0;
-        }
-    }
-}
-
-function drawTimeJustAdded()
-{
-    if (haveTimeAdded && timeJustAdded > 1000)
-    {    
-        textSize(gridSize / 2);
-        fill(255, 180);
-        let yPos = gameHeight - ((gridSize / 4) * (timeAddedTimer / 1000));
-        text('+' + floor(timeJustAdded/1000), gameWidth / 2 + gridSize * 2, yPos);
-    }
 }
 
 function gameOver()
@@ -898,6 +577,204 @@ function resetGame()
     smoothClock = 0;
     lastTime = 0;
     makeLetterArray();
+}
+
+/////// WORDS / POINTS
+
+function populateTrie() {
+    // Get the word list and build out the trie 
+    let listOfWords = wordlist();
+    for (let i = 0; i < listOfWords.length; i++) {
+        trie.add(listOfWords[i]);
+    }
+}
+
+function checkWord(word) {
+    return trie.search(word);
+}
+
+function doWordCheck() {
+    if (currentWord.length === 1) 
+    {
+        currentWord = '';
+        clickedTrail = [];
+        highlightLine.clear();
+        lastClicked = [];
+        return;
+    }
+    let isWord = checkWord(currentWord);
+    if (isWord) 
+    {
+        gotGoodWord(isWord, currentWord);
+    } 
+    else 
+    {
+        highlightColor = '#EE0000';
+        savedWord = currentWord;
+    }
+    // start the highlight
+    highlightCounter = 0;
+    savedTrail = clickedTrail;
+    currentWord = '';
+    clickedTrail = [];
+    highlightLine.clear();
+    lastClicked = [];
+}
+
+function scoreWordWithBonus(word) {
+    let rawScore = scoreWord(word);
+    // check each location along the path for a bonus
+    for (let i = 0; i < clickedTrail.length; i++) 
+    {
+        let [x, y] = clickedTrail[i];
+        let letter = letterArray[x][y];
+        // First apply extra letter bonuses, then word bonuses
+        for (let j = 0; j < bonusTiles.length; j++) 
+        {
+            let [bonusType, bonusX, bonusY, _] = bonusTiles[j];
+            if (bonusX === x && bonusY === y) 
+            {
+                switch (bonusType) 
+                {
+                    case BonusTileType.TripleLetter:
+                        rawScore += (2 * getScore(letter))
+                        break;
+                    case BonusTileType.DoubleLetter:
+                        rawScore += getScore(letter);
+                        break;
+                }
+            }
+        }
+        // Apply word bonuses
+        for (let j = 0; j < bonusTiles.length; j++) 
+        {
+            let [bonusType, bonusX, bonusY, _] = bonusTiles[j];
+            if (bonusX === x && bonusY === y) 
+            {
+                switch (bonusType) 
+                {
+                    case BonusTileType.TripleWord:
+                        rawScore *= 3;
+                        break;
+                    case BonusTileType.DoubleWord:
+                        rawScore *= 2;
+                        break;
+                }
+            }
+        }
+    }
+    return rawScore;
+}
+
+function gotGoodWord(word, wordWithBlanks)
+{
+    highlightColor = '#00EE00';
+
+    scoreJustAdded = scoreWordWithBonus(wordWithBlanks);
+    scrollTimer = 0;
+    score += scoreJustAdded;
+
+    newTime = calculateTimeScore(scoreJustAdded);
+    haveTimeAdded = true;
+    timeAddedTimer = 0;
+    timeJustAdded = newTime;
+    timer += newTime;
+
+    // check if we ranked up
+    let newRank = getRank();
+    if (newRank > user.rank)
+    {
+        user.rank = newRank;
+        showRankUp = true;
+        newRankTimer = 0;
+    }
+
+    removeLetters(clickedTrail);
+    dropBonuses(clickedTrail);
+    removeLockedTiles(clickedTrail);
+    replaceLetters();
+    highlightLine.removeAllPoints();
+
+    savedWord = word;
+
+    // update and save user data
+    // if we are in practice mode, don't count anything
+    if (gameDifficulty === 4)
+        return;
+    
+    let timeNow = smoothClock;
+    let timeElapsed = timeNow - lastTime;
+
+    lastTime = timeNow;
+    // otherwise, save our progress
+    updateUserData(scoreJustAdded, timeElapsed, word);
+
+}
+
+function finalWordCheck()
+{
+    let isWord = checkWord(currentWord);
+    if (!isWord) return;
+    let newScore = scoreWordWithBonus(currentWord);
+    score += newScore;
+    if (score >= highScores[gameDifficulty])
+    {
+        gotNewHighscore = true;
+        highScores[gameDifficulty] = score;
+    }
+    let timeNow = smoothClock;
+    let timeElapsed = timeNow - lastTime;
+
+    lastTime = timeNow;
+    // otherwise, save our progress
+    updateUserData(newScore, timeElapsed, isWord);
+    currentWord = '';
+    clickedTrail = [];
+    highlightLine.clear();
+}
+
+function currentWordLower() {
+    return currentWord.toLowerCase();
+}
+
+function calculateTimeScore(score)
+{
+    return score * 1000 * difficulties[gameDifficulty].secondPerScore;
+}
+
+/////// DRAWING
+
+function drawDeBroglie() {
+    // adapted from
+    // https://beetrandahiya.github.io/ChelseaJS-docs/examples/debroglie_rainbow.html
+    deBroglieTimer += deltaTime;
+    colorMode(HSB);
+    let t = deBroglieTimer / 20;
+    if (deBroglieTimer > 1000000) {
+        deBroglieTimer = 0;
+    }
+    for(j = 0; j < 7; j++)
+    {
+        for(i = 0; i <= 360; i += 3)
+        {
+            r = (gameWidth/3)+(gameWidth/2)*sin(radians(10*i+t+7*j))*sin(radians(10*i+t+7*j));
+            y = r*sin(radians(i));
+            x = r*cos(radians(i));
+            y = gameHeight/2-y;
+            x = gameWidth/2+x;
+            noStroke();
+            fill(color(30 * j, 255, 150, 200));
+            circle(x, y, 25, 25);
+        }
+    }
+    colorMode(RGB);
+}
+
+function drawShading() {
+    noFill();
+    stroke(0, 50);
+    strokeWeight(8);
+    rect(gridSize, gridSize, gridSize * 5, gridSize * 5);
 }
 
 function drawBackground() {
@@ -1078,15 +955,14 @@ function drawArrow(xPosition, yPosition, direction, selected, extraHighlight) {
 
 }
 
-function runRank()
+function drawTimeJustAdded()
 {
-    if (!showRankUp)
-        return;
-    newRankTimer += deltaTime;
-    if (newRankTimer > maxRankShow)
-    {
-        showRankUp = false;
-        newRankTimer = 0;
+    if (haveTimeAdded && timeJustAdded > 1000)
+    {    
+        textSize(gridSize / 2);
+        fill(255, 180);
+        let yPos = gameHeight - ((gridSize / 4) * (timeAddedTimer / 1000));
+        text('+' + floor(timeJustAdded/1000), gameWidth / 2 + gridSize * 2, yPos);
     }
 }
 
@@ -1207,16 +1083,6 @@ function drawHighlights() {
         fill(highlightColorAlpha);
         text(savedWord.toUpperCase(), gameWidth / 2, 6 * gridSize + gridSize);
     }
-}
-
-function isLocationSelected(x, y)
-{
-    for (let i = 0; i < clickedTrail.length; i++) {
-        if (clickedTrail[i][0] === x && clickedTrail[i][1] === y) {
-            return true;
-        }
-    }
-    return false;
 }
 
 function drawLetterArray() {
@@ -1364,33 +1230,228 @@ function drawLetterArray() {
             }
         }
     }
+}
+
+function drawDifficulties() {
+    textAlign(CENTER, CENTER);
+    textSize(gridSize);
+    let selected;
+    if (mouseY > gridSize * 2 && mouseY < gridSize * 7) {
+        selected = Math.floor((mouseY - gridSize) / gridSize) - 1;
+    }
+    for (let i = 0; i < 5; i++) {
+        let difficulty = difficulties[i];
+        let x = gameWidth / 2;
+        let y = (i + 2) * gridSize + gridSize / 2;
+        if (i === selected) {
+            fill(255);
+            stroke(180, 150);
+            strokeWeight(3);
+            text(difficulty.name, x, y);
+        }
+        fill(textColor);
+        noStroke();
+        text(difficulty.name, x, y);
+        if (i === selected) {
+            fill(255, 160);
+            text(difficulty.name, x, y);
+        }
+    }   
+}
+
+function drawTitle() {
+    textAlign(CENTER, CENTER);
+    textSize(gridSize);
+    fill(textColor);
+    noStroke();
+    text('hemhaw', gameWidth / 2, gridSize / 2 + gridSize);
+}
+
+function drawCurrentWord() {
+    let textsizeGuess = gridSize;
+    textSize(textsizeGuess);
+    while (textWidth(currentWord) > gameWidth) {
+        textsizeGuess--;
+        textSize(textsizeGuess);
+    }
+    textAlign(CENTER, CENTER);
+
+    // hightlight
+    stroke(220, 60);
+    fill(0);
+    strokeWeight(4);
+    text(currentWord, gameWidth / 2 - 1, 7 * gridSize + 1);
+    // dark shadow
+    stroke(0, 70);
+    text(currentWord, gameWidth / 2 + 1, 7 * gridSize + 3);
+    // regular letter
+    stroke(100, 150);
+    strokeWeight(1);
+    fill(color(textColor));
+    text(currentWord, gameWidth / 2, 7 * gridSize + 2);
 
 }
 
-function slideLine(row, col, direction) {
-    if (row !== false)
-    {
-        // we are sliding a row
-        // if direction = 1 we are sliding right
-        let tempIndex = direction === 1 ? 0 : 4;
-        let tempLetter = letterArray[4 - tempIndex][row];
-        for (let x = 4 - tempIndex; x !== tempIndex; x -= direction) {
-            letterArray[x][row] = letterArray[x - direction][row];
+function drawHighlightLine()
+{
+    highlightLine.draw();
+}
+
+function highlightClickTrail() {
+    // highlight squares
+    noStroke();
+    let trailColor = color(highlightedSquareColor);
+    let gq = gridSize / 256;
+    stroke(255, 50);
+    strokeWeight(1 + clickedTrail.length / 4);
+    for (let i = 0; i < clickedTrail.length; i++) {
+        trailColor.setAlpha(map(i, 0, clickedTrail.length, 80, 180) + (sin(smoothClock / 512 + i) * 20));
+        fill(trailColor);
+        let x = clickedTrail[i][0] + 1;
+        let y = clickedTrail[i][1] + 1;
+
+        rect(x * gridSize + 1, y * gridSize + 1, gridSize - 2, gridSize - 2);
+
+        if (i <= clickedTrail.length - 2) {
+            if (random() < 0.1) {
+                // let dist = random();
+                // let pos = [(1 - dist) * x1 + dist * x2, (1 - dist) * y1 + dist * y2];
+                let [x2, y2] = clickedTrail[i + 1];
+                // x2 +=1; y2 += 1;
+                let x1 = x * gridSize + gridSize / 2;
+                let y1 = y * gridSize + gridSize / 2;
+                x2 = (x2 + 1) * gridSize + gridSize / 2;
+                y2 = (y2 + 1) * gridSize + gridSize / 2;
+                // stroke(255, 0, 0);
+                // strokeWeight(2);
+                // line(x1, y1, x2, y2);
+                let pos = [random(x1, x2) + random(-gridSize / 2, gridSize / 2), random(y1, y2) + random(-gridSize / 2, gridSize / 2)];
+                
+                let xVel = (x2 - x1) / gq;
+                let yVel = (y2 - y1) / gq;
+                
+                let vel = [xVel / 128 * random(0, 2), yVel / 128 * random(0, 2)];
+                let life = random(150, 550);
+                let size = random(2, 8);
+                // let clr = color(correctColor);
+                // clr.setAlpha(random(80, 180));
+                spawnParticle(pos, vel, trailColor, size, life);
+            }
+            // let [x2, y2] = clickedTrail[i + 1];
+            // x2 +=1; y2 += 1;
+            // let x1 = x * gridSize;
+            // let y1 = y * gridSize;
+            // let x2 = (x2 + 1) * gridSize;
+            // let y2 = (y2 + 1) * gridSize;
         }
-        letterArray[tempIndex][row] = tempLetter;
-    }
-    else if (col !== false)
-    {
-        // we are sliding a column
-        // if direction = 1 we are sliding down
-        let tempIndex = direction === 1 ? 0 : 4;
-        let tempLetter = letterArray[col][4 - tempIndex];
-        for (let y = 4 - tempIndex; y !== tempIndex; y -= direction) {
-            letterArray[col][y] = letterArray[col][y - direction];
-        }
-        letterArray[col][tempIndex] = tempLetter;
     }
 }
+
+/////// TIMERS
+
+function runTimers() {
+    // TODO: Refactor these clocks, they can be classes
+    // smoothClock will run in all game modes, run up, and
+    // reset at very large intervals. This can be used to run
+    // any animation timers.
+    smoothClock += deltaTime;
+    if (gameState === GameStates.MainGame) {
+        totalTimePlayed += deltaTime;
+    }
+    if (gameDifficulty !== 4)   // don't countdown in unlimited mode
+        timer -= deltaTime;
+    if (doingSlide) {
+        slidingTimer += deltaTime;
+        if (slidingTimer >= slidingMaxTime) {
+            slideLine(rowSliding, colSliding, slidingDirection);
+            slidingTimer = 0;
+            // if we're still clicking over the arrow, keep sliding
+            if (checkStillClickedArrow()) {
+
+            }
+            else
+            {
+                doingSlide = false;
+                rowSliding = false;
+                colSliding = false;
+            }
+        }
+    }
+    if (gameDifficulty !== 4 && timer <= 0)
+    {
+        // this is fired once so we can store high score here
+        finalWordCheck();
+        // write any remaining time
+        let remainingTime = smoothClock - lastTime;
+        updateUserData(0, remainingTime, '');
+        if (score > highScores[gameDifficulty])
+        {
+            gotNewHighscore = true;
+            highScores[gameDifficulty] = score;
+            saveHighscores();
+        }
+        timer = 0;
+        if (mouseIsPressed && mouseButton === LEFT) 
+        {
+            eatGameoverClickFlag = true;
+        }
+        //isGameOver = true;
+        if (playingSavedGame)
+        {
+            eraseSaveGame();
+        }
+        gameState = GameStates.EndGame;
+        deBroglieTimer = 0;
+    }
+    highlightCounter += deltaTime;
+    if (highlightCounter > maxHightlightTime) {
+        savedTrail = [];
+        savedWord = null;
+        highlightCounter = 0;
+        highlightColor = '#000000';
+    }
+    scrollTimer += deltaTime;
+    if (scrollTimer > maxScrollTimer) {
+        scrollTimer = 0;
+        scoreJustAdded = false;
+    }
+    if (haveTimeAdded)
+    {
+        timeAddedTimer += deltaTime;
+        if (timeAddedTimer > timeJustAddedMaxTimer)
+        {
+            haveTimeAdded = false;
+            timeAddedTimer = 0;
+        }
+    }
+}
+
+function runRank()
+{
+    if (!showRankUp)
+        return;
+    newRankTimer += deltaTime;
+    if (newRankTimer > maxRankShow)
+    {
+        showRankUp = false;
+        newRankTimer = 0;
+    }
+}
+
+function runTimerDisplayer()
+{
+    if (gameState === GameStates.MainGame)
+    {
+        newTimeDisplayTimer += deltaTime;
+        if (newTimeDisplayTimer > 2)
+        {
+            newTimeDisplayTimer = 0;
+            newTimeDisplay = false;
+        }
+    }
+}
+
+/////// MOUSE / TOUCH
 
 function mousePressed() {
     if (mouseX >= 0 && mouseX < gridSize / 2 
@@ -1469,50 +1530,27 @@ function mousePressed() {
     }
 }
 
-function checkForSquareSelect()
+function checkStillClickedArrow()
 {
-    [gridX, gridY] = getClosestSquare();
-    // check if our last gridPos was the last entry in our clickedTrail and our current grid pos is the 
-    // second last entry
-    if (clickedTrail.length > 1 &&
-        clickedTrail[clickedTrail.length - 2][0] === gridX &&
-        clickedTrail[clickedTrail.length - 2][1] === gridY &&
-        clickedTrail[clickedTrail.length - 1][0] === lastClicked[0] &&
-        clickedTrail[clickedTrail.length - 1][1] === lastClicked[1])
-        {
-            clickedTrail.pop();
-            highlightLine.pop();
-            currentWord = currentWord.substring(0, currentWord.length - 1);
-            lastClicked = [gridX, gridY];
-        }
+    let xClicked = originalArrowX;
+    let yClicked = originalArrowY;
+    return isMouseWithinArrowSquare(xClicked, yClicked) && mouseIsPressed;
+}
 
-    if (gridX >= 0 && gridX <= 4 && gridY >= 0 && gridY <= 4 
-        && !isLocationSelected(gridX, gridY) 
-        && isMouseCloseToCenterOfSquare(gridX + 1, gridY + 1)) {
-        // make sure we're the first click or touching the last location selected
-        if (lastClicked.length === 0) 
-        {
-            lastClicked = [gridX, gridY];
-        } 
-        else 
-        {
-            if (doGridsTouch(lastClicked[0], lastClicked[1], gridX, gridY)) 
-            {
-                lastClicked = [gridX, gridY];
-            } 
-            else 
-            {
-                // nothing else to do, stop handling mouse click
-                return;
-            }
-        }
-        let selectedLetter = letterArray[gridX][gridY];
-        currentWord += selectedLetter;
-        clickedTrail.push([gridX, gridY]);
-        highlightLine.push([gridX, gridY]);
-    }
-    lastGridPos = [gridX, gridY];
-
+function isMouseWithinArrowSquare(x, y) {
+    let gridX = floor(mouseX / gridSize);
+    let gridY = floor(mouseY / gridSize);
+    let xMin = 0;
+    let xMax = width;
+    let yMin = 0;
+    let yMax = height;
+    if (x===0) xMin = gridSize / 2;
+    if (x===6) xMax = width - gridSize / 2;
+    if (y===0) yMin = gridSize / 2;
+    if (y===6) yMax = 7 * gridSize - gridSize / 2;
+    return gridX === x && gridY === y &&
+        xMin <= mouseX && mouseX <= xMax &&
+        yMin <= mouseY && mouseY <= yMax;
 }
 
 function mouseDragged() {
@@ -1576,293 +1614,128 @@ function mouseReleased() {
     }
 }
 
-function scoreWordWithBonus(word) {
-    let rawScore = scoreWord(word);
-    // check each location along the path for a bonus
-    for (let i = 0; i < clickedTrail.length; i++) 
+function checkExitGame() {
+    if (gameState !== GameStates.MainGame) return;
+    if (!mouseIsPressed || mouseButton != LEFT) 
     {
-        let [x, y] = clickedTrail[i];
-        let letter = letterArray[x][y];
-        // First apply extra letter bonuses, then word bonuses
-        for (let j = 0; j < bonusTiles.length; j++) 
-        {
-            let [bonusType, bonusX, bonusY, _] = bonusTiles[j];
-            if (bonusX === x && bonusY === y) 
-            {
-                switch (bonusType) 
-                {
-                    case BonusTileType.TripleLetter:
-                        rawScore += (2 * getScore(letter))
-                        break;
-                    case BonusTileType.DoubleLetter:
-                        rawScore += getScore(letter);
-                        break;
-                }
-            }
-        }
-        // Apply word bonuses
-        for (let j = 0; j < bonusTiles.length; j++) 
-        {
-            let [bonusType, bonusX, bonusY, _] = bonusTiles[j];
-            if (bonusX === x && bonusY === y) 
-            {
-                switch (bonusType) 
-                {
-                    case BonusTileType.TripleWord:
-                        rawScore *= 3;
-                        break;
-                    case BonusTileType.DoubleWord:
-                        rawScore *= 2;
-                        break;
-                }
-            }
-        }
-    }
-    return rawScore;
-}
-
-function dropBonuses(trail) {
-    // drop bonuses on the board
-    for (let i = 0; i < trail.length; i++)
-    {
-        let [x, y] = trail[i];
-        for (let j = bonusTiles.length - 1; j >= 0; j--)
-        {
-            let [bonusType, bonusX, bonusY, __] = bonusTiles[j];
-            if (bonusX === x && bonusY === y)
-            {
-                bonusTiles.splice(j, 1);
-                // we also create an animated tile here
-                let randomLife = random(550, 850);
-                let tile = [bonusType, bonusX, bonusY, randomLife, randomLife];
-                animatedBonusTiles.push(tile);
-            }
-        }
-    }
-}
-
-function doWordCheck() {
-    if (currentWord.length === 1) 
-    {
-        currentWord = '';
-        clickedTrail = [];
-        highlightLine.clear();
-        lastClicked = [];
+        exitToMainMenuTimer = 0;
         return;
     }
-    let isWord = checkWord(currentWord);
-    if (isWord) 
-    {
-        gotGoodWord(isWord, currentWord);
-    } 
-    else 
-    {
-        highlightColor = '#EE0000';
-        savedWord = currentWord;
-    }
-    // start the highlight
-    highlightCounter = 0;
-    savedTrail = clickedTrail;
-    currentWord = '';
-    clickedTrail = [];
-    highlightLine.clear();
-    lastClicked = [];
-}
-
-
-function gotGoodWord(word, wordWithBlanks)
-{
-    highlightColor = '#00EE00';
-
-    scoreJustAdded = scoreWordWithBonus(wordWithBlanks);
-    scrollTimer = 0;
-    score += scoreJustAdded;
-
-    newTime = calculateTimeScore(scoreJustAdded);
-    haveTimeAdded = true;
-    timeAddedTimer = 0;
-    timeJustAdded = newTime;
-    timer += newTime;
-
-    // check if we ranked up
-    let newRank = getRank();
-    if (newRank > user.rank)
-    {
-        user.rank = newRank;
-        showRankUp = true;
-        newRankTimer = 0;
-    }
-
-    removeLetters(clickedTrail);
-    dropBonuses(clickedTrail);
-    removeLockedTiles(clickedTrail);
-    replaceLetters();
-    highlightLine.removeAllPoints();
-
-    savedWord = word;
-
-    // update and save user data
-    // if we are in practice mode, don't count anything
-    if (gameDifficulty === 4)
-        return;
-    
-    let timeNow = smoothClock;
-    let timeElapsed = timeNow - lastTime;
-
-    lastTime = timeNow;
-    // otherwise, save our progress
-    updateUserData(scoreJustAdded, timeElapsed, word);
-
-}
-
-function calculateTimeScore(score)
-{
-    return score * 1000 * difficulties[gameDifficulty].secondPerScore;
-}
-
-function runTimerDisplayer()
-{
-    if (gameState === GameStates.MainGame)
-    {
-        newTimeDisplayTimer += deltaTime;
-        if (newTimeDisplayTimer > 2)
-        {
-            newTimeDisplayTimer = 0;
-            newTimeDisplay = false;
+    if (mouseX > gameWidth - gridSize / 2 && mouseY < gridSize / 2) {
+        fill(0, map(exitToMainMenuTimer, 0, 500, 0, 180));
+        noStroke();
+        rect(0, 0, gameWidth, gameHeight);
+        exitToMainMenuTimer += deltaTime;
+        if (exitToMainMenuTimer > 500) {
+            if (gameDifficulty == 4)
+            {
+                mainMenuClickTimer = 0;
+                mainMenuNeedUnclick = true;
+                exitToMainMenuTimer = 0;
+                resetGame();
+                gameState = GameStates.MainMenu;
+            }
+            else
+            {
+                // TODO: If we have a saved game, we want to confirm
+                // overwriting it!
+                saveGame();
+                haveSavedGame = true;
+                gameState = GameStates.MainMenu;
+            }
         }
     }
-}
-
-function finalWordCheck()
-{
-    let isWord = checkWord(currentWord);
-    if (!isWord) return;
-    let newScore = scoreWordWithBonus(currentWord);
-    score += newScore;
-    if (score >= highScores[gameDifficulty])
+    else
     {
-        gotNewHighscore = true;
-        highScores[gameDifficulty] = score;
+        exitToMainMenuTimer = 0;
     }
-    let timeNow = smoothClock;
-    let timeElapsed = timeNow - lastTime;
-
-    lastTime = timeNow;
-    // otherwise, save our progress
-    updateUserData(newScore, timeElapsed, isWord);
-    currentWord = '';
-    clickedTrail = [];
-    highlightLine.clear();
 }
 
-function currentWordLower() {
-    return currentWord.toLowerCase();
-}
+////// GRID
 
-function drawCurrentWord() {
-    let textsizeGuess = gridSize;
-    textSize(textsizeGuess);
-    while (textWidth(currentWord) > gameWidth) {
-        textsizeGuess--;
-        textSize(textsizeGuess);
-    }
-    textAlign(CENTER, CENTER);
-
-    // hightlight
-    stroke(220, 60);
-    fill(0);
-    strokeWeight(4);
-    text(currentWord, gameWidth / 2 - 1, 7 * gridSize + 1);
-    // dark shadow
-    stroke(0, 70);
-    text(currentWord, gameWidth / 2 + 1, 7 * gridSize + 3);
-    // regular letter
-    stroke(100, 150);
-    strokeWeight(1);
-    fill(color(textColor));
-    text(currentWord, gameWidth / 2, 7 * gridSize + 2);
-
-}
-
-function highlightClickTrail() {
-    // highlight squares
-    noStroke();
-    let trailColor = color(highlightedSquareColor);
-    let gq = gridSize / 256;
+function isLocationSelected(x, y)
+{
     for (let i = 0; i < clickedTrail.length; i++) {
-        trailColor.setAlpha(map(i, 0, clickedTrail.length, 80, 180) + (sin(smoothClock / 512 + i) * 20));
-        fill(trailColor);
-        let x = clickedTrail[i][0] + 1;
-        let y = clickedTrail[i][1] + 1;
-
-        rect(x * gridSize + 1, y * gridSize + 1, gridSize - 2, gridSize - 2);
-        // for (let j = 0; j < floor(random(1, 3)); j++) {
-        //     let pos = [x * gridSize + random(0, gridSize),
-        //        y * gridSize + random(0, gridSize)];
-        //     let vel = [random(-1, 1) * gq, random(-1, 1) * gq];
-        //     let size = random(1, 8);
-        //     let clr = color(correctColor);
-        //     // clr.setAlpha(random(80, 180));
-        //     let life = random(150, 350);
-        //     spawnParticle(pos, vel, clr, size, life);
-            
-        // }
-        if (i <= clickedTrail.length - 2) {
-            if (random() < 0.1) {
-                // let dist = random();
-                // let pos = [(1 - dist) * x1 + dist * x2, (1 - dist) * y1 + dist * y2];
-                let [x2, y2] = clickedTrail[i + 1];
-                // x2 +=1; y2 += 1;
-                let x1 = x * gridSize + gridSize / 2;
-                let y1 = y * gridSize + gridSize / 2;
-                x2 = (x2 + 1) * gridSize + gridSize / 2;
-                y2 = (y2 + 1) * gridSize + gridSize / 2;
-                // stroke(255, 0, 0);
-                // strokeWeight(2);
-                // line(x1, y1, x2, y2);
-                let pos = [random(x1, x2) + random(-gridSize / 2, gridSize / 2), random(y1, y2) + random(-gridSize / 2, gridSize / 2)];
-                
-                let xVel = (x2 - x1) / gq;
-                let yVel = (y2 - y1) / gq;
-                
-                let vel = [xVel / 128 * random(0, 2), yVel / 128 * random(0, 2)];
-                let life = random(150, 550);
-                let size = random(2, 8);
-                // let clr = color(correctColor);
-                // clr.setAlpha(random(80, 180));
-                spawnParticle(pos, vel, trailColor, size, life);
-            }
-            // let [x2, y2] = clickedTrail[i + 1];
-            // x2 +=1; y2 += 1;
-            // let x1 = x * gridSize;
-            // let y1 = y * gridSize;
-            // let x2 = (x2 + 1) * gridSize;
-            // let y2 = (y2 + 1) * gridSize;
+        if (clickedTrail[i][0] === x && clickedTrail[i][1] === y) {
+            return true;
         }
+    }
+    return false;
+}
+
+function slideLine(row, col, direction) {
+    if (row !== false)
+    {
+        // we are sliding a row
+        // if direction = 1 we are sliding right
+        let tempIndex = direction === 1 ? 0 : 4;
+        let tempLetter = letterArray[4 - tempIndex][row];
+        for (let x = 4 - tempIndex; x !== tempIndex; x -= direction) {
+            letterArray[x][row] = letterArray[x - direction][row];
+        }
+        letterArray[tempIndex][row] = tempLetter;
+    }
+    else if (col !== false)
+    {
+        // we are sliding a column
+        // if direction = 1 we are sliding down
+        let tempIndex = direction === 1 ? 0 : 4;
+        let tempLetter = letterArray[col][4 - tempIndex];
+        for (let y = 4 - tempIndex; y !== tempIndex; y -= direction) {
+            letterArray[col][y] = letterArray[col][y - direction];
+        }
+        letterArray[col][tempIndex] = tempLetter;
     }
 }
 
-function drawHighlightLine()
+function checkForSquareSelect()
 {
-    highlightLine.draw();
-}
+    [gridX, gridY] = getClosestSquare();
+    // check if our last gridPos was the last entry in our clickedTrail and our current grid pos is the 
+    // second last entry
+    if (clickedTrail.length > 1 &&
+        clickedTrail[clickedTrail.length - 2][0] === gridX &&
+        clickedTrail[clickedTrail.length - 2][1] === gridY &&
+        clickedTrail[clickedTrail.length - 1][0] === lastClicked[0] &&
+        clickedTrail[clickedTrail.length - 1][1] === lastClicked[1])
+        {
+            clickedTrail.pop();
+            highlightLine.pop();
+            currentWord = currentWord.substring(0, currentWord.length - 1);
+            lastClicked = [gridX, gridY];
+        }
 
-function windowResized() {
-    centerCanvas();
-}
+    if (gridX >= 0 && gridX <= 4 && gridY >= 0 && gridY <= 4 
+        && !isLocationSelected(gridX, gridY) 
+        && isMouseCloseToCenterOfSquare(gridX + 1, gridY + 1)) {
+        // make sure we're the first click or touching the last location selected
+        if (lastClicked.length === 0) 
+        {
+            lastClicked = [gridX, gridY];
+        } 
+        else 
+        {
+            if (doGridsTouch(lastClicked[0], lastClicked[1], gridX, gridY)) 
+            {
+                lastClicked = [gridX, gridY];
+            } 
+            else 
+            {
+                // nothing else to do, stop handling mouse click
+                return;
+            }
+        }
+        let selectedLetter = letterArray[gridX][gridY];
+        currentWord += selectedLetter;
+        clickedTrail.push([gridX, gridY]);
+        highlightLine.push([gridX, gridY]);
+    }
+    lastGridPos = [gridX, gridY];
 
-function centerCanvas() {
-    let x = (windowWidth - width) / 2;
-    let y = (windowHeight - height) / 2;
-    cnv.position(x, y);
 }
 
 function doGridsTouch(x1, y1, x2, y2) {
     return Math.abs(x1 - x2) <= 1 && Math.abs(y1 - y2) <= 1;
-}
-
-function checkWord(word) {
-    return trie.search(word);
 }
 
 ////// PARTICLES
@@ -2056,41 +1929,6 @@ function handleMainMenuMouse() {
         }
     }
 
-}
-
-function drawDifficulties() {
-    textAlign(CENTER, CENTER);
-    textSize(gridSize);
-    let selected;
-    if (mouseY > gridSize * 2 && mouseY < gridSize * 7) {
-        selected = Math.floor((mouseY - gridSize) / gridSize) - 1;
-    }
-    for (let i = 0; i < 5; i++) {
-        let difficulty = difficulties[i];
-        let x = gameWidth / 2;
-        let y = (i + 2) * gridSize + gridSize / 2;
-        if (i === selected) {
-            fill(255);
-            stroke(180, 150);
-            strokeWeight(3);
-            text(difficulty.name, x, y);
-        }
-        fill(textColor);
-        noStroke();
-        text(difficulty.name, x, y);
-        if (i === selected) {
-            fill(255, 160);
-            text(difficulty.name, x, y);
-        }
-    }   
-}
-
-function drawTitle() {
-    textAlign(CENTER, CENTER);
-    textSize(gridSize);
-    fill(textColor);
-    noStroke();
-    text('hemhaw', gameWidth / 2, gridSize / 2 + gridSize);
 }
 
 function doIntro() {
@@ -2422,4 +2260,61 @@ function makeBonusTiles() {
     }
     // continue
     bonusTiles.push([tileType, xGuess, yGuess, lifeSpan]);
+}
+
+function dropBonuses(trail) {
+    // drop bonuses on the board
+    for (let i = 0; i < trail.length; i++)
+    {
+        let [x, y] = trail[i];
+        for (let j = bonusTiles.length - 1; j >= 0; j--)
+        {
+            let [bonusType, bonusX, bonusY, __] = bonusTiles[j];
+            if (bonusX === x && bonusY === y)
+            {
+                bonusTiles.splice(j, 1);
+                // we also create an animated tile here
+                let randomLife = random(550, 850);
+                let tile = [bonusType, bonusX, bonusY, randomLife, randomLife];
+                animatedBonusTiles.push(tile);
+            }
+        }
+    }
+}
+
+////// PALETTE
+
+function loadRandomPalette() {
+    // Get a new random palette and save it
+    let randomPaletteIndex = floor(random(0, palettes.length));
+    let randomPalette = palettes[randomPaletteIndex];
+    [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = randomPalette;
+    if (random() < 0.5)
+    {
+        [backgroundColor, gridColor] = [gridColor, backgroundColor];
+    }
+    storeItem('palette', randomPaletteIndex);
+}
+
+function loadPalette(index) {
+    let palette = palettes[index];
+    [backgroundColor, correctColor, highlightedSquareColor, textColor, gridColor] = palette;
+}
+
+////// OTHER
+
+function printConsoleGreeting()
+{
+    console.log("hemhaw");
+    console.log("Tyler Weston, February/March 2022, https://github.com/tylerweston/hemhaw");
+}
+
+function windowResized() {
+    centerCanvas();
+}
+
+function centerCanvas() {
+    let x = (windowWidth - width) / 2;
+    let y = (windowHeight - height) / 2;
+    cnv.position(x, y);
 }
