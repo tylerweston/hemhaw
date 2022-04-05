@@ -90,7 +90,9 @@ async function getRank(force=false)
     if (force || cachedRank === -1)
     {
         cachedRank = await getRankFromApi();
-        return cachedRank.text();
+        // return cachedRank.text();
+        cachedRank = cachedRank.text();
+        return cachedRank;
     }
     return cachedRank;
 }

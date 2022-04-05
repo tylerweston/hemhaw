@@ -24,15 +24,17 @@ function changeUsername()
 
 }
 
-// basically, we'll just call getScores every now and then for now
-// eventually maybe only when the top scores change or something, we'll
-// receive data 
-// async function getScores (url) {
-//     let resp = await fetch(url);
-//     // let resp = await response.json();
-//     console.log(resp);
-//     return resp;
-// }
+async function viewHighScores()
+{
+    let score = await getScores();
+    let res = score.text();
+    res.then((data) => {
+        // TODO: For now, we just use a down and dirty alert popup for this
+        // at some point, we'll make this nicer and integrate it into the game
+        // a bit better
+        window.alert(data);
+    });
+}
 
 // post a new score to the server
 // note eventually this will also have to update a specific
@@ -46,8 +48,9 @@ async function postScore (toPost) {
 
 async function getScores () {
     let req = `${serverAddress}/${scoreEndpoint}`;
-    let response = await fetch(req, {method: 'GET'});
-    console.log(response);
+    let response = await fetch(req, {method: 'GET', headers: {'Content-Type': 'text/plain'}});
+    //console.log(response);
+    return response;
 }
 
 // tell the server about a new user

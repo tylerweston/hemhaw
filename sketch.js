@@ -1407,10 +1407,7 @@ function runTimers() {
             slideLine(rowSliding, colSliding, slidingDirection);
             slidingTimer = 0;
             // if we're still clicking over the arrow, keep sliding
-            if (checkStillClickedArrow()) {
-
-            }
-            else
+            if (!checkStillClickedArrow()) 
             {
                 doingSlide = false;
                 rowSliding = false;
@@ -1458,7 +1455,6 @@ function runTimers() {
         }
         // update our rank with our new score
         getRank(force=true).then((data) => {
-            console.log(data);
             user.rank = data;});
         gameState = GameStates.EndGame;
         deBroglieTimer = 0;
