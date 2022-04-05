@@ -151,10 +151,10 @@ let mainMenuClickTimer = 0;
 let mainMenuSelected = 0;
 let showingUserInfo = false;
 
-// let oldRank = 0;
-let newRankTimer = 0;
-let showRankUp = false;
-const maxRankShow = 5000;
+// let oldLevel = 0;
+let newLevelTimer = 0;
+let showLevelUp = false;
+const maxLevelShow = 5000;
 
 let highlightLine;
 
@@ -381,7 +381,7 @@ function setup() {
 
     // testing server stuff
 
-    // getScores();
+    getScores();
     // postScore(endpoint, 'beef', 666);
 
 
@@ -467,7 +467,7 @@ function doMainGame() {
     runBonusTiles();
     runAnimatedBonusTiles();
     runLockedTiles();
-    runRank();
+    runLevel();
     highlightLine.updateThreads();
 
     makeBonusTiles();
@@ -491,7 +491,7 @@ function doMainGame() {
     drawAnimatedBonusTiles();
     drawCurrentWord();
     drawUI();
-    drawRank();
+    drawLevel();
     drawTimeJustAdded();
     drawScoreSlider();
     drawShading();
@@ -721,13 +721,13 @@ function gotGoodWord(word, wordWithBlanks)
     timeJustAdded = newTime;
     timer += newTime;
 
-    // check if we ranked up
-    let newRank = getRank();
-    if (newRank > user.rank)
+    // check if we levelled up
+    let newLevel = getLevel();
+    if (newLevel > user.level)
     {
-        user.rank = newRank;
-        showRankUp = true;
-        newRankTimer = 0;
+        user.level = newLevel;
+        showLevelUp = true;
+        newLevelTimer = 0;
     }
 
     removeLetters(clickedTrail);
@@ -1007,20 +1007,20 @@ function drawTimeJustAdded()
     }
 }
 
-function drawRank() 
+function drawLevel() 
 {
-    if (!showRankUp)
+    if (!showLevelUp)
         return;
-    let rankText = 'new rank!\n ' + user.rank;
+    let levelText = 'new level!\n ' + user.level;
     textSize(int(gridSize + cos(smoothClock / 1000) * gridSize / 4));
     let alph;
-    if (newRankTimer < maxRankShow / 5)
+    if (newLevelTimer < maxLevelShow / 5)
     {
-        alph = newRankTimer;
+        alph = newLevelTimer;
     }
-    else if (newRankTimer > maxRankShow / 5 * 4)
+    else if (newLevelTimer > maxLevelShow / 5 * 4)
     {
-        alph = maxRankShow - newRankTimer;
+        alph = maxLevelShow - newLevelTimer;
     }
     else
     {
@@ -1029,7 +1029,7 @@ function drawRank()
     fill(180 + sin(smoothClock / 400) * 40, alph);
     strokeWeight(7 + sin(smoothClock / 800) * 3, alph / 2);
     stroke(0, 40);
-    text(rankText, gameWidth / 2, gameHeight * (1 - newRankTimer / maxRankShow));
+    text(levelText, gameWidth / 2, gameHeight * (1 - newLevelTimer / maxLevelShow));
 }
 
 function drawUI() {
@@ -1482,15 +1482,15 @@ function runTimers() {
     }
 }
 
-function runRank()
+function runLevel()
 {
-    if (!showRankUp)
+    if (!showLevelUp)
         return;
-    newRankTimer += deltaTime;
-    if (newRankTimer > maxRankShow)
+    newLevelTimer += deltaTime;
+    if (newLevelTimer > maxLevelShow)
     {
-        showRankUp = false;
-        newRankTimer = 0;
+        showLevelUp = false;
+        newLevelTimer = 0;
     }
 }
 

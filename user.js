@@ -39,7 +39,7 @@ function loadUser()
 {
     let userItem = getItem('user');
     user = JSON.parse(userItem);
-    user.rank = getRank();
+    user.level = getLevel();
     highScores = user.highScores;
 }
 
@@ -88,10 +88,10 @@ function showUserInfo() {
     fill(color(textColor));
     strokeWeight(5);
     stroke(0, 50);
-    let [rank, nextRank] = getRankAndRemaining();
+    let [level, nextLevel] = getLevelAndRemaining();
     text(`${user.name}`, width / 2, gridSize);
     textSize(gridSize / 2);
-    text(`rank:${rank}/pts to next:${nextRank}`, width / 2, gridSize * 1.5);
+    text(`level:${level}/pts to next:${nextLevel}`, width / 2, gridSize * 1.5);
     textSize(gridSize / 3);
     let scoreText = processScore(user.totalScore);
     let timeText = processTime(user.totalTime);
@@ -105,12 +105,12 @@ function showUserInfo() {
     text("top scores:\n" + topScores(), width / 2, height - gridSize * 1);
 }
 
-function getRank()
+function getLevel()
 {
     // TODO: Cache this
-    //return pointsToRank();
-    let [rank, _] = getRankAndRemaining();
-    return rank;
+    //return pointsToLevel();
+    let [level, _] = getLevelAndRemaining();
+    return level;
 }
 
 function getUserHash()
@@ -118,22 +118,22 @@ function getUserHash()
     return user.hash;
 }
 
-function getRankAndRemaining()
+function getLevelAndRemaining()
 {
     let points = user.totalScore;
     let lvl = 100;
-    let rank = 0;
+    let level = 0;
     while (true)
     {
         if (points - lvl >= 0)
         {
             points -= lvl;
-            rank++;
-            lvl += 10 * rank;
+            level++;
+            lvl += 10 * level;
         }
         else
         {
-            return [rank, lvl - points];
+            return [level, lvl - points];
         }
     }
 }
