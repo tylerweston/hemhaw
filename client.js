@@ -2,6 +2,7 @@ const serverAddress = 'https://tylerweston.pythonanywhere.com';
 const userEndpoint = 'user';
 const scoreEndpoint = 'score';
 const renameEndpoint = 'rename';
+const positionEndpoint = 'globalposition';
 
 function changeUsername() 
 {
@@ -38,8 +39,8 @@ function changeUsername()
 // difficulty! it should add the new score to the users total score
 async function postScore (toPost) {
     let req = `${serverAddress}/${scoreEndpoint}?hash=${toPost.hash}&score=${toPost.score}`;
-    req += `&easy_score=${toPost.easy_score}&medium_score=${toPost.medium_score}`;
-    req += `&hard_score=${toPost.hard_score}&blitz_score=${toPost.blitz_score}`;
+        req += `&easy_score=${toPost.easy_score}&medium_score=${toPost.medium_score}`;
+        req += `&hard_score=${toPost.hard_score}&blitz_score=${toPost.blitz_score}`;
     let response = await fetch(req, {method: 'POST'});
 }
 
@@ -61,4 +62,11 @@ async function renameUser(toPost)
     let point = `${serverAddress}/${renameEndpoint}?name=${toPost.name}&hash=${toPost.hash}`;
     let response = await fetch(point, {method: 'PUT'});
     // console.log(response);
+}
+
+// get the users global position
+async function getUserPosition (toPost) {
+    let point = `${serverAddress}/${positionEndpoint}?hash=${toPost.hash}`;
+    let response = fetch(point, {method: 'GET', headers: {'Content-Type': 'text/plain'}});
+    return response;
 }

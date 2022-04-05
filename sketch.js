@@ -381,7 +381,7 @@ function setup() {
 
     // testing server stuff
 
-    getScores();
+    // getScores();
     // postScore(endpoint, 'beef', 666);
 
 
@@ -1456,6 +1456,10 @@ function runTimers() {
         {
             eraseSaveGame();
         }
+        // update our rank with our new score
+        getRank(force=true).then((data) => {
+            console.log(data);
+            user.rank = data;});
         gameState = GameStates.EndGame;
         deBroglieTimer = 0;
     }

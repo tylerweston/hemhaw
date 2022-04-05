@@ -1,5 +1,7 @@
 let user; 
 
+let cachedRank = -1;
+
 // note totaltime is stored in seconds, not milliseconds
 function emptyUser() 
 {
@@ -17,7 +19,6 @@ function emptyUser()
     }
     storeItem('user', JSON.stringify(newUser));
     postUser (newUser)
-    console.log(newUser);
 }
 
 function tryLoadUser() 
@@ -40,7 +41,10 @@ function loadUser()
     let userItem = getItem('user');
     user = JSON.parse(userItem);
     user.level = getLevel();
+    // user.rank = getRank();
     highScores = user.highScores;
+    getRank().then((data) => {
+        user.rank = data;});
 }
 
 function getRandomUserName()
@@ -80,6 +84,27 @@ function updateUserData(score, time, word)
     saveUser();
 }
 
+async function getRank(force=false)
+{
+    // call api and get rank if we don't have it cached
+    if (force || cachedRank === -1)
+    {
+        cachedRank = await getRankFromApi();
+        return cachedRank.text();
+    }
+    return cachedRank;
+}
+
+async function getRankFromApi()
+{
+    // call api and get rank
+    payload = {
+        hash: user.hash,
+    }
+    let rank = await getUserPosition(payload);
+    return rank;
+}
+
 function showUserInfo() {
     fill(0, 10);
     rect(0, 0, width, height);
@@ -96,7 +121,8 @@ function showUserInfo() {
     let scoreText = processScore(user.totalScore);
     let timeText = processTime(user.totalTime);
     let wordsText = processWords(user.totalWords);
-    text(
+    text(  
+    "global rank: " + user.rank + "\n" +
     "total score: " + scoreText + "\n" +
     "total time: " + timeText + "\n" +
     "total words: " + wordsText + "\n" +
