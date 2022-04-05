@@ -44,6 +44,12 @@ TODO:
 
 - setup python anywhere flask server and show great words on other users games!
 
+- collect words that MIGHT show up on the screen and then every now
+and then, show a word from this list.
+
+- doesn't look like score is being updated properly? is it only
+  updated when a game is ended?
+
 - make sure if bad user data is loaded, it is fixed
 - add hemhaw easter egg, if you ever spell it out do something cool
 - add sound effects
@@ -59,6 +65,11 @@ saved game needs:
 - timer
 - board
 
+RANK should be LEVEL since RANK is now the users global
+position in relation to other players, want to avoid that confusion
+
+Don't need to store local and remote? YES! Need to store
+the hash local, but nothing else!
 */
 let gridSize;
 let gameWidth;
@@ -111,7 +122,7 @@ let exitToMainMenuTimer = 0;
 
 const maxHightlightTime = 1000;
 
-const slidingMaxTime = 200;
+const slidingMaxTime = 150;
 let slidingTimer = 0;
 let rowSliding = false;
 let colSliding = false;
@@ -191,17 +202,21 @@ let introTimer; // = 0;
 let newTime = 0;
 let newTimeDisplayTimer = 0;
 
-class HighlightThread {
-    constructor(trail) {
+class HighlightThread 
+{
+    constructor(trail) 
+    {
         this.trail = trail;
         this.lines = [];
     }
 
-    indexToReal(index) {
+    indexToReal(index) 
+    {
         return (index + 1) * gridSize + gridSize / 2;
     }
 
-    update(trail) {
+    update(trail) 
+    {
         // update the list of thread positions
         this.trail = trail;
         //this.lines = [];
@@ -209,7 +224,8 @@ class HighlightThread {
         let [oldXoffset, oldYoffset] = [random(-1, 1) * gridSize / 16, 
             random(-1, 1) * gridSize / 16];
         let gq = gridSize / 64;
-        for (let index = 0; index < trail.length - 1; index++) {
+        for (let index = 0; index < trail.length - 1; index++) 
+        {
             let [x1, y1] = trail[index];
             let [x2, y2] = trail[index + 1];
             [x1, y1] = [this.indexToReal(x1) + oldXoffset, 
@@ -226,28 +242,35 @@ class HighlightThread {
             let line = [x1, y1, x2, y2, clr, random(1, 2)];
             this.lines.push(line);
             // sometimes spawn a particle here
-            if (random() < 0.1) {
+            // if (random() < 0.1 && clickedTrail.length > 5) 
+            if (clickedTrail.length >= 10 && random() < 0.1)
+            {
                 let dist = random();
                 let pos = [(1 - dist) * x1 + dist * x2, (1 - dist) * y1 + dist * y2];
                 let vel = [random(-gq, gq), random(-gq, gq)];
-                let life = random(150, 350);
-                let size = random(1, 15);
+                let extraSize = map(clickedTrail.length, 10, 25, 0, 15);
+                let size = random(1, 15 + extraSize);
+                let life = random(150, 350 + extraSize * 20);
+
                 spawnParticle(pos, vel, clr, size, life);
             }
         }
         // randomly remove some lines
-        for (let i = this.lines.length - 1; i >= 0; i--) {
+        for (let i = this.lines.length - 1; i >= 0; i--) 
+        {
             if (random(0, 1) < 0.25) {
                 this.lines.splice(i, 1);
             }
         }
     }
 
-    clear() {
+    clear() 
+    {
         this.lines = [];
     }
 
-    draw() {
+    draw() 
+    {
         for (let i = 0; i < this.lines.length; i++) {
             let [x1, y1, x2, y2, color, _strokeWeight] = this.lines[i];
             strokeWeight(_strokeWeight);
@@ -258,8 +281,10 @@ class HighlightThread {
 
 }
 
-class HighlightLine {
-    constructor(trail) {
+class HighlightLine 
+{
+    constructor(trail) 
+    {
         this.trail = trail;
         this.threads = [];
         this.numThreads = 5;
@@ -271,7 +296,8 @@ class HighlightLine {
         }
     }
 
-    clear() {
+    clear() 
+    {
         this.trail = [];
     }
 
@@ -283,29 +309,36 @@ class HighlightLine {
         }
     }
 
-    addThread() {
+    addThread() 
+    {
         // add a thread to our highlight line
         this.threads.push(new HighlightThread(this.trail));
     }
 
-    updateThreads() {
-        for (let i = 0; i < this.threads.length; i++) {
+    updateThreads() 
+    {
+        for (let i = 0; i < this.threads.length; i++) 
+        {
             this.threads[i].update(this.trail);
         }
     }
 
-    draw() {
-        for (let i = 0; i < this.threads.length; i++) {
+    draw() 
+    {
+        for (let i = 0; i < this.threads.length; i++) 
+        {
             this.threads[i].draw();
         }
     }
 
-    push(location) {
+    push(location) 
+    {
         this.trail.push(location);
         this.updateThreads();
     }
 
-    pop() {
+    pop() 
+    {
         let val = this.trail.pop();
         this.updateThreads();
         return val;
@@ -340,11 +373,18 @@ function setup() {
     {
         loadRandomPalette();
     }
-    loadHighscores();
+    // loadHighscores();
     // emptyUser();
     tryLoadSaveGame();
     tryLoadUser();
     printConsoleGreeting();
+
+    // testing server stuff
+
+    // getScores();
+    // postScore(endpoint, 'beef', 666);
+
+
     highlightLine = new HighlightLine();
     introTimer = 0;
     background(0);
@@ -555,6 +595,7 @@ function resetGame()
     currentWord = '';
     clickedTrail = [];
     lastClicked = [];
+    lockedTiles = [];
     savedTrail = [];
     highlightLine.clear();
     highlightLine.removeAllPoints();
@@ -1388,8 +1429,23 @@ function runTimers() {
         {
             gotNewHighscore = true;
             highScores[gameDifficulty] = score;
-            saveHighscores();
+            saveUser();
         }
+        // update our database with new data
+        updatedHighscores = [0, 0, 0, 0];
+        if (gotNewHighscore)
+            updatedHighscores[gameDifficulty] = highScores[gameDifficulty];
+        
+        [easyScore, mediumScore, hardScore, blitzScore] = updatedHighscores;
+        payload = {
+            hash: getUserHash(),
+            score: score,
+            easy_score: easyScore,
+            medium_score: mediumScore,
+            hard_score: hardScore,
+            blitz_score: blitzScore
+        };
+        postScore(payload);
         timer = 0;
         if (mouseIsPressed && mouseButton === LEFT) 
         {
@@ -1530,29 +1586,6 @@ function mousePressed() {
     }
 }
 
-function checkStillClickedArrow()
-{
-    let xClicked = originalArrowX;
-    let yClicked = originalArrowY;
-    return isMouseWithinArrowSquare(xClicked, yClicked) && mouseIsPressed;
-}
-
-function isMouseWithinArrowSquare(x, y) {
-    let gridX = floor(mouseX / gridSize);
-    let gridY = floor(mouseY / gridSize);
-    let xMin = 0;
-    let xMax = width;
-    let yMin = 0;
-    let yMax = height;
-    if (x===0) xMin = gridSize / 2;
-    if (x===6) xMax = width - gridSize / 2;
-    if (y===0) yMin = gridSize / 2;
-    if (y===6) yMax = 7 * gridSize - gridSize / 2;
-    return gridX === x && gridY === y &&
-        xMin <= mouseX && mouseX <= xMax &&
-        yMin <= mouseY && mouseY <= yMax;
-}
-
 function mouseDragged() {
     if (gameState !== GameStates.MainGame) return;
     if (mouseX < gridSize || 
@@ -1569,25 +1602,6 @@ function mouseDragged() {
     };
     checkForSquareSelect();
     return false;
-}
-
-function isMouseCloseToCenterOfSquare(gridX, gridY) {
-    // Check that the mouse is within a certain distance to the center of a given grid location.
-    // This is used to make it easier to select diagonally.
-    let x = gridX  * gridSize + gridSize / 2;
-    let y = gridY * gridSize + gridSize / 2;
-    let dx = mouseX - x;
-    let dy = mouseY - y;
-    let dist = sqrt(dx * dx + dy * dy);
-    return dist < gridSize / 3;
-}
-
-function getClosestSquare() {
-    let realX = floor(mouseX / gridSize);
-    let realY = floor(mouseY / gridSize);
-    let gridX = realX - 1;
-    let gridY = realY - 1;
-    return [gridX, gridY];
 }
 
 function mouseReleased() {
@@ -1612,6 +1626,48 @@ function mouseReleased() {
         }
         doWordCheck();
     }
+}
+
+function checkStillClickedArrow()
+{
+    let xClicked = originalArrowX;
+    let yClicked = originalArrowY;
+    return isMouseWithinArrowSquare(xClicked, yClicked) && mouseIsPressed;
+}
+
+function isMouseWithinArrowSquare(x, y) {
+    let gridX = floor(mouseX / gridSize);
+    let gridY = floor(mouseY / gridSize);
+    let xMin = 0;
+    let xMax = width;
+    let yMin = 0;
+    let yMax = height;
+    if (x===0) xMin = gridSize / 2;
+    if (x===6) xMax = width - gridSize / 2;
+    if (y===0) yMin = gridSize / 2;
+    if (y===6) yMax = 7 * gridSize - gridSize / 2;
+    return gridX === x && gridY === y &&
+        xMin <= mouseX && mouseX <= xMax &&
+        yMin <= mouseY && mouseY <= yMax;
+}
+
+function isMouseCloseToCenterOfSquare(gridX, gridY) {
+    // Check that the mouse is within a certain distance to the center of a given grid location.
+    // This is used to make it easier to select diagonally.
+    let x = gridX  * gridSize + gridSize / 2;
+    let y = gridY * gridSize + gridSize / 2;
+    let dx = mouseX - x;
+    let dy = mouseY - y;
+    let dist = sqrt(dx * dx + dy * dy);
+    return dist < gridSize / 3;
+}
+
+function getClosestSquare() {
+    let realX = floor(mouseX / gridSize);
+    let realY = floor(mouseY / gridSize);
+    let gridX = realX - 1;
+    let gridY = realY - 1;
+    return [gridX, gridY];
 }
 
 function checkExitGame() {
@@ -1765,7 +1821,7 @@ function runParticles() {
 function drawParticles() {
     for (let i = 0; i < particles.length; i++) {
         let c = particles[i].color;
-        c.setAlpha(particles[i].life / 2);
+        c.setAlpha(max(80, particles[i].life / 2));
         fill(c);
         noStroke();
         ellipse(
@@ -1813,19 +1869,19 @@ function tryLoadSaveGame() {
     }
 }
 
-function loadHighscores() {
-    let highscoreString = getItem('highscores');
-    if (!highscoreString) {
-        storeItem('highscores', '0,0,0,0');
-        highscoreString = '0,0,0,0';
-    }
-    highScores = highscoreString.split(',').map(x => int(x));
-}
+// function loadHighscores() {
+//     let highscoreString = getItem('highscores');
+//     if (!highscoreString) {
+//         storeItem('highscores', '0,0,0,0');
+//         highscoreString = '0,0,0,0';
+//     }
+//     highScores = highscoreString.split(',').map(x => int(x));
+// }
 
-function saveHighscores() {
-    let highscoreString = highScores.join(',');
-    storeItem('highscores', highscoreString);
-}
+// function saveHighscores() {
+//     let highscoreString = highScores.join(',');
+//     storeItem('highscores', highscoreString);
+// }
 
 ////// MAIN MENU + INTRO
 

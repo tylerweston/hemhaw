@@ -6,37 +6,32 @@ function emptyUser()
     // create a new user
     let newUser = 
     {
-        name: '',
+        name: getRandomUserName(),
         totalScore: 0,
         totalTime: 0,
         totalWords: 0,
         totalLetters: 0,
-        bestWords: []
+        bestWords: [],
+        highScores: [0, 0, 0, 0],
+        hash: getHash() 
     }
     storeItem('user', JSON.stringify(newUser));
+    postUser (newUser)
+    console.log(newUser);
 }
 
 function tryLoadUser() 
 {
     if (getItem('user') === null)
     {
-        // create a new user
-        let newUser = 
-        {
-            name: getRandomUserName(),
-            totalScore: 0,
-            totalTime: 0,
-            totalWords: 0,
-            totalLetters: 0,
-            bestWords: []
-        }
-        storeItem('user', JSON.stringify(newUser));
+        emptyUser();
     }
     loadUser();
 }
 
 function saveUser() 
 {
+    user.highScores = highScores;
     storeItem('user', JSON.stringify(user));
 }
 
@@ -45,6 +40,7 @@ function loadUser()
     let userItem = getItem('user');
     user = JSON.parse(userItem);
     user.rank = getRank();
+    highScores = user.highScores;
 }
 
 function getRandomUserName()
@@ -115,6 +111,11 @@ function getRank()
     //return pointsToRank();
     let [rank, _] = getRankAndRemaining();
     return rank;
+}
+
+function getUserHash()
+{
+    return user.hash;
 }
 
 function getRankAndRemaining()
@@ -196,3 +197,52 @@ function processWords(words)
 {
     return words;
 }
+
+function getHash()
+{
+    // return a random new hash and make sure it doesn't
+    // exist in the score database, since this is what we will
+    // use to uniquely identify each user
+
+    // generate a random 256 bit hash and return it as a string
+    
+    let hash;
+    do
+    {
+        hash = generateHexString(32);
+        // check if the hash exists in the database
+    } while (!checkHashUnique(hash))
+    return hash;
+}
+
+function checkHashUnique(hash)
+{
+    // check if the hash is unique in the score database
+    // return true if it is, false if it isn't
+    // lol for now, if we hit the same hash omfg
+    return true;
+}
+
+// taken from https://stackoverflow.com/questions/5398737/how-can-i-make-a-simple-wep-key-generator-in-javascript
+// thanks to user "Tracker1"
+function generateHexString(length) {
+    // Use crypto.getRandomValues if available
+    if (
+      typeof crypto !== 'undefined' 
+      && typeof crypto.getRandomValues === 'function'
+    ) {
+      var tmp = new Uint8Array(Math.max((~~length)/2));
+      crypto.getRandomValues(tmp);
+      return Array.from(tmp)
+        .map(n => ('0'+n.toString(16)).substr(-2))
+        .join('')
+        .substr(0,length);
+    }
+  
+    // fallback to Math.getRandomValues
+    var ret = "";
+    while (ret.length < length) {
+      ret += Math.random().toString(16).substring(2);
+    }
+    return ret.substring(0,length);
+  }
