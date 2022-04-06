@@ -28,6 +28,8 @@ function tryLoadUser()
         emptyUser();
     }
     loadUser();
+    getRank(force=true).then((data) => {
+        user.rank = data;});
 }
 
 function saveUser() 

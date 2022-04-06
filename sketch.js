@@ -11,6 +11,11 @@ and
 
 /*
 TODO:
+Add a help option to the menu options
+allow users to copy their hash to their clipboard or something
+so that they can load and save users
+better styling for buttons on page
+
 - REFACTOR. Getting big enough that it will be worth refactoring to make it more maintanable in the future.
     - Rewrite things as classes
         - Tiles
@@ -47,8 +52,6 @@ TODO:
 - collect words that MIGHT show up on the screen and then every now
 and then, show a word from this list.
 
-- doesn't look like score is being updated properly? is it only
-  updated when a game is ended?
 
 - make sure if bad user data is loaded, it is fixed
 - add hemhaw easter egg, if you ever spell it out do something cool
@@ -64,9 +67,6 @@ saved game needs:
 - score
 - timer
 - board
-
-RANK should be LEVEL since RANK is now the users global
-position in relation to other players, want to avoid that confusion
 
 Don't need to store local and remote? YES! Need to store
 the hash local, but nothing else!
@@ -2365,12 +2365,43 @@ function printConsoleGreeting()
     console.log("Tyler Weston, February/March 2022, https://github.com/tylerweston/hemhaw");
 }
 
-function windowResized() {
+function windowResized() 
+{
     centerCanvas();
 }
 
-function centerCanvas() {
+function centerCanvas() 
+{
     let x = (windowWidth - width) / 2;
     let y = (windowHeight - height) / 2;
     cnv.position(x, y);
+}
+
+function viewInstructions()
+{
+    let instructionText = `
+    hemhaw instructions
+    - select tiles by clicking and dragging to make valid scrabble words
+    - points give you extra time on your clock. the game ends when you run 
+       out of time on your clock
+    - you can only use a letter once per word
+    - click the arrows next to the board to shift a row or column
+    - blank squares are wild card letters
+    - to unselect a word just drag your mouse off the play field
+    - click the question mark in the top left to change colors
+    - click your name to view your statistics
+    - practice mode does not count towards your statistics
+    - black squares are locked and the row and column cannot be moved
+      until you form a word using the black letter.
+    - double and triple word and letter squares will appear for a short
+      time and randomly, use them in a word before they disappear!
+    - your level is based on the total overall points you've scored
+    - you can save a game in progress by clicking the x in the top right
+      to exit an unfinished game. starting a new game while you have a 
+      game saved will not erase your saved game, only saving a new game
+      or finishing your saved game will remove it. select resume from 
+      the main menu to continue a saved game.
+    - your score is only counted when a game finishes, not when you
+      save.`;
+    window.alert(instructionText);
 }
