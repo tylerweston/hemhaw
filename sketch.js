@@ -562,7 +562,7 @@ function gameOver()
     text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScores[gameDifficulty]+"\n" + difficulties[gameDifficulty].name, gameWidth / 2, gridSize * 5);
     if (mouseIsPressed && mouseButton === LEFT && !eatGameoverClickFlag) {
         gameOverMouseCount += deltaTime;
-        if (gameOverMouseCount > 200) {
+        if (gameOverMouseCount > 50) {
             // if we are over the play again button, start again
             if (abs(mouseY - gridSize * 2) < gridSize / 2)
             { 
@@ -1682,7 +1682,7 @@ function checkExitGame() {
         noStroke();
         rect(0, 0, gameWidth, gameHeight);
         exitToMainMenuTimer += deltaTime;
-        if (exitToMainMenuTimer > 500) {
+        if (exitToMainMenuTimer > 50) {
             if (gameDifficulty == 4)
             {
                 mainMenuClickTimer = 0;
@@ -1958,7 +1958,7 @@ function handleMainMenuMouse() {
     } else {
         mainMenuClickTimer = 0;
     }
-    if (mainMenuClickTimer > 200) {
+    if (mainMenuClickTimer > 50) {
         if (!(mouseY > gridSize * 2 && mouseY < gridSize * 8))
         {
             mainMenuClickTimer = 0;
