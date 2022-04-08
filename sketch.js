@@ -115,7 +115,6 @@ let gotNewHighscore = false;
 let shownNewHighscore = false;
 let timer;
 let totalTimePlayed = 0;
-
 let isGameOver = false;
 let eatGameoverClickFlag = false;
 let exitToMainMenuTimer = 0;
@@ -159,6 +158,12 @@ const maxLevelShow = 5000;
 let highlightLine;
 
 let lastTime = 0;
+
+
+// new rank info
+let gotNewRank = false;
+let rankDiff = 0;
+let oldRank;
 
 class BonusTileType {
     static TripleLetter = new BonusTileType('Triple Letter');
@@ -559,7 +564,28 @@ function gameOver()
     stroke(color(backgroundColor));
     fill(color(textColor));
     strokeWeight(2);
-    text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScores[gameDifficulty]+"\n" + difficulties[gameDifficulty].name, gameWidth / 2, gridSize * 5);
+    let txt = `
+    ${difficulties[gameDifficulty].name}
+    total time: ${totalTimeString}
+    final score: ${score}
+    high score: ${highScores[gameDifficulty]}
+    rank: ${user.rank}
+    `
+    if (gotNewRank)
+    {
+        txt += 'new rank! ';
+        let rankDiffText = `${rankDiff>0?'+':''}${rankDiff}`;
+        if (rankDiff == 1 || rankDiff == -1)
+        {
+            txt += rankDiffText + ' rank';
+        }
+        else if (rankDiff > 1 || rankDiff < -1)
+        {
+            txt += rankDiffText + ' ranks';
+        }
+    }
+    //text('total time: ' + totalTimeString + '\nfinal score: ' + score + "\nhigh score: " + highScores[gameDifficulty]+"\n" + difficulties[gameDifficulty].name, gameWidth / 2, gridSize * 5);
+    text(txt, gameWidth / 2, gridSize * 5);
     if (mouseIsPressed && mouseButton === LEFT && !eatGameoverClickFlag) {
         gameOverMouseCount += deltaTime;
         if (gameOverMouseCount > 50) {
@@ -1453,9 +1479,25 @@ function runTimers() {
         {
             eraseSaveGame();
         }
-        // update our rank with our new score
+
+        // update our rank with our new score and store our old rank if we changed
+        oldRank = user.rank;
+        gotNewRank = false;
+        rankDiff = 0;
         getRank(force=true).then((data) => {
-            user.rank = data;});
+            user.rank = data;
+            let oldRankInt = parseInt(oldRank.split('/')[0]);
+            let newRankInt = parseInt(user.rank.split('/')[0]);
+            if (newRankInt !== oldRankInt)
+            {
+                gotNewRank = true;
+                // rankDiff = user.rank - oldRank;
+                // split the string at the / and take the first part
+                // let oldRankInt = parseInt(oldRank.split('/')[0]);
+                // let newRankInt = parseInt(user.rank.split('/')[0]);
+                rankDiff = oldRankInt - newRankInt;
+            }
+        });
         gameState = GameStates.EndGame;
         deBroglieTimer = 0;
     }
