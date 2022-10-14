@@ -7,3 +7,5 @@ A Boggle/Scrabble/Sliding Puzzle mashup
 - You gain half a second for each point you get. How long can you play for?  
 - There will be a new palette each time you play, if you don't like the current one click the top left of the window.
 - Click and drag the mouse to select words. Release mouse button to select your word. If you want to deselect a word, drag you mouse off the grid.    
+  
+[Play here](https://tylerweston.github.io/hemhaw/)  
